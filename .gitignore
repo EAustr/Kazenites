@@ -27,3 +27,4 @@ Thumbs.db
 out/
 
 src/main/resources/application.properties
+Kazenites-backend/src/main/resources/application.properties
