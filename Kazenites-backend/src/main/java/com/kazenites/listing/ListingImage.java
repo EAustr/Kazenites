@@ -9,23 +9,47 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "listing_images", indexes = {
-    @Index(columnList = "listingId")
+        @Index(columnList = "listing_id")
 })
 public class ListingImage {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @jakarta.persistence.Column(name = "listing_id")
     private Long listingId;
     private String path;
     private Integer sortOrder;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public Long getListingId() { return listingId; }
-    public void setListingId(Long listingId) { this.listingId = listingId; }
-    public String getPath() { return path; }
-    public void setPath(String path) { this.path = path; }
-    public Integer getSortOrder() { return sortOrder; }
-    public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Long getListingId() {
+        return listingId;
+    }
+
+    public void setListingId(Long listingId) {
+        this.listingId = listingId;
+    }
+
+    public String getPath() {
+        return path;
+    }
+
+    public void setPath(String path) {
+        this.path = path;
+    }
+
+    public Integer getSortOrder() {
+        return sortOrder;
+    }
+
+    public void setSortOrder(Integer sortOrder) {
+        this.sortOrder = sortOrder;
+    }
 }
