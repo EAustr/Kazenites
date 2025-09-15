@@ -1,4 +1,4 @@
-package com.kazenites.kazenites;
+package com.kazenites;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
