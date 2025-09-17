@@ -5,7 +5,7 @@
  * @format
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useContext } from 'react';
 import {
   StatusBar,
   StyleSheet,
@@ -17,6 +17,8 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AuthProvider, AuthContext } from './src/auth/AuthContext';
+import { LoginScreen, RegisterScreen } from './src/auth/AuthScreens';
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
@@ -24,12 +26,43 @@ function App() {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
+      <AuthProvider>
+        <RootNavigator />
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }
 
-function AppContent() {
+function RootNavigator() {
+  const { user, logout } = useContext(AuthContext);
+  const [showRegister, setShowRegister] = useState(false);
+
+  if (!user) {
+    return (
+      <View style={styles.container}>
+        {showRegister ? (
+          <>
+            <RegisterScreen />
+            <View style={styles.row}>
+              <Button title="Have an account? Login" onPress={() => setShowRegister(false)} />
+            </View>
+          </>
+        ) : (
+          <>
+            <LoginScreen />
+            <View style={styles.row}>
+              <Button title="New here? Register" onPress={() => setShowRegister(true)} />
+            </View>
+          </>
+        )}
+      </View>
+    );
+  }
+
+  return <AppContent onLogout={logout} />;
+}
+
+function AppContent({ onLogout }: { onLogout: () => void }) {
   // NOTE: Adjust BASE_URL depending on where your backend runs.
   // - iOS simulator can use http://localhost:8080
   // - Android emulator use http://10.0.2.2:8080
@@ -61,9 +94,10 @@ function AppContent() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Kazenites</Text>
-      <Text style={styles.subtitle}>Backend health check</Text>
+      <Text style={styles.subtitle}>Welcome. You are logged in.</Text>
       <View style={styles.row}>
         <Button title="Ping backend" onPress={ping} />
+        <Button title="Logout" onPress={onLogout} />
       </View>
       {loading && (
         <View style={styles.row}>
@@ -82,10 +116,7 @@ function AppContent() {
         </View>
       )}
       <View style={styles.noteBlock}>
-        <Text style={styles.note}>
-          Tip: Update BASE_URL in App.tsx if you run on a device or different
-          host.
-        </Text>
+        <Text style={styles.note}>Tip: Update BASE_URL in src/config.ts as needed.</Text>
       </View>
     </View>
   );
