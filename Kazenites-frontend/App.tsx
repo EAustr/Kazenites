@@ -44,14 +44,20 @@ function RootNavigator() {
           <>
             <RegisterScreen />
             <View style={styles.row}>
-              <Button title="Have an account? Login" onPress={() => setShowRegister(false)} />
+              <Button
+                title="Have an account? Login"
+                onPress={() => setShowRegister(false)}
+              />
             </View>
           </>
         ) : (
           <>
             <LoginScreen />
             <View style={styles.row}>
-              <Button title="New here? Register" onPress={() => setShowRegister(true)} />
+              <Button
+                title="New here? Register"
+                onPress={() => setShowRegister(true)}
+              />
             </View>
           </>
         )}
@@ -116,7 +122,9 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
         </View>
       )}
       <View style={styles.noteBlock}>
-        <Text style={styles.note}>Tip: Update BASE_URL in src/config.ts as needed.</Text>
+        <Text style={styles.note}>
+          Tip: Update BASE_URL in src/config.ts as needed.
+        </Text>
       </View>
     </View>
   );
