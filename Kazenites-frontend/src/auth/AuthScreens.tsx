@@ -11,9 +11,18 @@ export function LoginScreen() {
 
   const onSubmit = async () => {
     setError(null);
+    const emailTrim = email.trim();
+    if (!emailTrim || !password) {
+      setError('Email and password are required');
+      return;
+    }
+    if (!/.+@.+\..+/.test(emailTrim)) {
+      setError('Enter a valid email');
+      return;
+    }
     setLoading(true);
     try {
-      await login(email.trim(), password);
+      await login(emailTrim, password);
     } catch (e: any) {
       setError(e.message || 'Login failed');
     } finally {
@@ -59,15 +68,21 @@ export function RegisterScreen() {
 
   const onSubmit = async () => {
     setError(null);
+    const nameTrim = name.trim();
+    const emailTrim = email.trim();
+    if (!nameTrim) return setError('Name is required');
+    if (!emailTrim) return setError('Email is required');
+    if (!/.+@.+\..+/.test(emailTrim)) return setError('Enter a valid email');
+    if (password.length < 8) return setError('Password must be at least 8 characters');
     setLoading(true);
     try {
-      await register(
-        email.trim(),
-        password,
-        name.trim(),
-        city.trim() || undefined,
-      );
+      await register(emailTrim, password, nameTrim, city.trim() || undefined);
     } catch (e: any) {
+      try {
+        const obj = JSON.parse(e.message);
+        const first = obj && typeof obj === 'object' ? Object.values(obj)[0] : null;
+        if (typeof first === 'string') return setError(first);
+      } catch {}
       setError(e.message || 'Registration failed');
     } finally {
       setLoading(false);

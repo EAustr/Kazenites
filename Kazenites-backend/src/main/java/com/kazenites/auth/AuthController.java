@@ -11,11 +11,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
 
 import com.kazenites.auth.dto.AuthResponse;
 import com.kazenites.auth.dto.LoginRequest;
 import com.kazenites.auth.dto.RegisterRequest;
 import com.kazenites.security.JwtService;
+import com.kazenites.security.LoginAttemptService;
 import com.kazenites.security.UserPrincipal;
 import com.kazenites.user.Role;
 import com.kazenites.user.User;
@@ -29,20 +31,23 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authManager;
+    private final LoginAttemptService loginAttemptService;
 
     public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService,
-            AuthenticationManager authManager) {
+            AuthenticationManager authManager, LoginAttemptService loginAttemptService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authManager = authManager;
+        this.loginAttemptService = loginAttemptService;
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest req) {
-        if (req.email == null || req.password == null || req.name == null) {
-            return ResponseEntity.badRequest().body("Missing fields");
-        }
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest req) {
+        req.email = req.email.trim().toLowerCase();
+        req.name = req.name.trim();
+        if (req.city != null)
+            req.city = req.city.trim();
         if (userRepository.findByEmail(req.email).isPresent()) {
             return ResponseEntity.badRequest().body("Email already in use");
         }
@@ -58,9 +63,19 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest req) {
-        Authentication auth = authManager.authenticate(
-                new UsernamePasswordAuthenticationToken(req.email, req.password));
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req) {
+        String email = req.email.trim().toLowerCase();
+        if (loginAttemptService.isBlocked(email)) {
+            return ResponseEntity.status(429).body("Too many attempts. Try again later.");
+        }
+        Authentication auth;
+        try {
+            auth = authManager.authenticate(new UsernamePasswordAuthenticationToken(email, req.password));
+        } catch (Exception ex) {
+            loginAttemptService.onFailure(email);
+            return ResponseEntity.status(401).body("Invalid credentials");
+        }
+        loginAttemptService.onSuccess(email);
         UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
         User u = principal.getUser();
         String token = jwtService.generateToken(u.getId(), u.getEmail(), u.getRole().name());
