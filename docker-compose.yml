@@ -1,0 +1,73 @@
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: kazenites-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 12345678
+      MYSQL_DATABASE: kazenitesdb
+      MYSQL_USER: kazenites
+      MYSQL_PASSWORD: kazenites123
+    ports:
+      - "3307:3306"  # Use 3307 to avoid conflicts with local MySQL
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    networks:
+      - kazenites-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Spring Boot Backend
+  backend:
+    build: 
+      context: ./Kazenites-backend
+      dockerfile: Dockerfile
+    container_name: kazenites-backend
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/kazenitesdb
+      - SPRING_DATASOURCE_USERNAME=kazenites
+      - SPRING_DATASOURCE_PASSWORD=kazenites123
+      - APP_JWT_SECRET=docker-jwt-secret-change-in-production
+      - APP_UPLOAD_DIR=/app/uploads
+    ports:
+      - "8080:8080"
+    volumes:
+      - backend_uploads:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - kazenites-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/api/health"]
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # React Native Frontend (Metro bundler for development)
+  frontend:
+    build:
+      context: ./Kazenites-frontend
+      dockerfile: Dockerfile
+    container_name: kazenites-frontend
+    ports:
+      - "8081:8081"  # Metro bundler
+    volumes:
+      - ./Kazenites-frontend:/app
+      - /app/node_modules
+    environment:
+      - REACT_NATIVE_PACKAGER_HOSTNAME=0.0.0.0
+    networks:
+      - kazenites-network
+
+volumes:
+  mysql_data:
+  backend_uploads:
+
+networks:
+  kazenites-network:
+    driver: bridge

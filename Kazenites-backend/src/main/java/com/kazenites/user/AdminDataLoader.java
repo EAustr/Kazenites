@@ -38,7 +38,7 @@ public class AdminDataLoader {
                 admin.setName("Admin");
                 admin.setCity("Rīga");
                 admin.setRole(Role.ADMIN);
-                admin.setPasswordHash(encoder.encode("admin123"));
+                admin.setPasswordHash(encoder.encode("Admin123!"));
                 return repo.save(admin);
             });
         };
