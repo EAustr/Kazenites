@@ -28,3 +28,4 @@ out/
 
 src/main/resources/application.properties
 Kazenites-backend/src/main/resources/application.properties
+Kazenites-backend/src/main/java/com/kazenites/user/AdminDataLoader.java

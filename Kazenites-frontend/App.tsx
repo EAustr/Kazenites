@@ -5,7 +5,7 @@
  * @format
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useContext } from 'react';
 import {
   StatusBar,
   StyleSheet,
@@ -15,21 +15,65 @@ import {
   Button,
   ActivityIndicator,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { AuthProvider, AuthContext } from './src/auth/AuthContext';
+import { LoginScreen, RegisterScreen } from './src/auth/AuthScreens';
+import HomeScreen from './src/home/HomeScreen';
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        translucent={false}
+        backgroundColor="#0b0f14"
+      />
+      <AuthProvider>
+        <RootNavigator />
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }
 
-function AppContent() {
+function RootNavigator() {
+  const { user, logout } = useContext(AuthContext);
+  const [authView, setAuthView] = useState<null | 'login' | 'register'>(null);
+
+  if (!user) {
+    if (authView === 'login' || authView === 'register') {
+      return (
+        <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#0b0f14' }}>
+          <View style={{ backgroundColor: '#0b0f14', paddingHorizontal: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity onPress={() => setAuthView(null)} style={{ paddingVertical: 6, paddingRight: 12 }}>
+              <Text style={{ color: '#93c5fd', fontWeight: '600' }}>Back</Text>
+            </TouchableOpacity>
+            <Text style={{ color: 'white', fontSize: 18, fontWeight: '700' }}>
+              {authView === 'login' ? 'Login' : 'Register'}
+            </Text>
+          </View>
+          <View style={{ flex: 1, backgroundColor: 'white' }}>
+            {authView === 'login' ? <LoginScreen /> : <RegisterScreen />}
+          </View>
+        </SafeAreaView>
+      );
+    }
+    return (
+      <HomeScreen
+        isGuest
+        onLoginPress={() => setAuthView('login')}
+        onRegisterPress={() => setAuthView('register')}
+      />
+    );
+  }
+
+  return <HomeScreen isGuest={false} onLogoutPress={logout} />;
+}
+
+function AppContent({ onLogout }: { onLogout: () => void }) {
   // NOTE: Adjust BASE_URL depending on where your backend runs.
   // - iOS simulator can use http://localhost:8080
   // - Android emulator use http://10.0.2.2:8080
@@ -61,9 +105,10 @@ function AppContent() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Kazenites</Text>
-      <Text style={styles.subtitle}>Backend health check</Text>
+      <Text style={styles.subtitle}>Welcome. You are logged in.</Text>
       <View style={styles.row}>
         <Button title="Ping backend" onPress={ping} />
+        <Button title="Logout" onPress={onLogout} />
       </View>
       {loading && (
         <View style={styles.row}>
@@ -83,8 +128,7 @@ function AppContent() {
       )}
       <View style={styles.noteBlock}>
         <Text style={styles.note}>
-          Tip: Update BASE_URL in App.tsx if you run on a device or different
-          host.
+          Tip: Update BASE_URL in src/config.ts as needed.
         </Text>
       </View>
     </View>
