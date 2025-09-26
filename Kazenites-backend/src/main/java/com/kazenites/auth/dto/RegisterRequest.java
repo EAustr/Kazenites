@@ -26,6 +26,14 @@ public class RegisterRequest {
     )
     public String name;
 
+    @NotBlank(message = "Surname is required")
+    @Size(min = 2, max = 100, message = "Surname must be at least 2 characters")
+    @Pattern(
+        regexp = "^(?=.*[\\p{L}])[\\p{L}\\p{M} .'-]+$",
+        message = "Surname must contain letters and only letters/spaces/.'-"
+    )
+    public String surname;
+
     @Size(max = 100, message = "City must be under 100 characters")
     @Pattern(
         regexp = "^[\\p{L}\\p{M} .'-]*$",

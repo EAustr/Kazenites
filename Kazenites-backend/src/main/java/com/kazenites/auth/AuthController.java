@@ -55,6 +55,7 @@ public class AuthController {
         u.setEmail(req.email);
         u.setPasswordHash(passwordEncoder.encode(req.password));
         u.setName(req.name);
+        u.setSurname(req.surname);
         u.setCity(req.city);
         u.setRole(Role.USER);
         userRepository.save(u);

@@ -20,6 +20,7 @@ type AuthContextType = {
     email: string,
     password: string,
     name: string,
+    surname: string,
     city?: string,
   ) => Promise<void>;
   refreshMe: () => Promise<void>;
@@ -101,12 +102,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const register = useCallback(
-    async (email: string, password: string, name: string, city?: string) => {
+    async (email: string, password: string, name: string, surname: string, city?: string) => {
       setError(null);
       const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, name, city }),
+        body: JSON.stringify({ email, password, name, surname, city }),
       });
       if (!res.ok) {
         const txt = await res.text();

@@ -62,6 +62,7 @@ export function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [surname, setSurname] = useState('');
   const [city, setCity] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -69,14 +70,16 @@ export function RegisterScreen() {
   const onSubmit = async () => {
     setError(null);
     const nameTrim = name.trim();
+    const surnameTrim = surname.trim();
     const emailTrim = email.trim();
     if (!nameTrim) return setError('Name is required');
+    if (!surnameTrim) return setError('Surname is required');
     if (!emailTrim) return setError('Email is required');
     if (!/.+@.+\..+/.test(emailTrim)) return setError('Enter a valid email');
     if (password.length < 8) return setError('Password must be at least 8 characters');
     setLoading(true);
     try {
-      await register(emailTrim, password, nameTrim, city.trim() || undefined);
+      await register(emailTrim, password, nameTrim, surnameTrim, city.trim() || undefined);
     } catch (e: any) {
       try {
         const obj = JSON.parse(e.message);
@@ -96,6 +99,12 @@ export function RegisterScreen() {
         placeholder="Name"
         value={name}
         onChangeText={setName}
+        style={styles.input}
+      />
+      <TextInput
+        placeholder="Surname"
+        value={surname}
+        onChangeText={setSurname}
         style={styles.input}
       />
       <TextInput
