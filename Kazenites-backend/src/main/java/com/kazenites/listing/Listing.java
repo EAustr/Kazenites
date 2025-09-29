@@ -41,7 +41,9 @@ public class Listing {
 
     private Double quantity;
 
-    private String unit;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ListingMUnits unit = ListingMUnits.KG;
 
     private String city;
 
@@ -119,11 +121,11 @@ public class Listing {
         this.quantity = quantity;
     }
 
-    public String getUnit() {
+    public ListingMUnits getUnit() {
         return unit;
     }
 
-    public void setUnit(String unit) {
+    public void setUnit(ListingMUnits unit) {
         this.unit = unit;
     }
 

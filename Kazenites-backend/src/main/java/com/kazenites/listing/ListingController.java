@@ -46,11 +46,11 @@ public class ListingController {
         l.setPrice(req.price);
         l.setCurrency(req.currency != null ? req.currency : "EUR");
         l.setQuantity(req.quantity);
-        l.setUnit(req.unit);
+        l.setUnit(req.unit != null ? req.unit : ListingMUnits.KG);
         l.setCity(req.city);
         l.setCategoryId(req.categoryId);
         l.setOwnerId(principal.getUser().getId());
-        l.setStatus(ListingStatus.PENDING);
+        l.setStatus(ListingStatus.PENDING); 
         return repo.save(l);
     }
 
