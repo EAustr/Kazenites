@@ -4,12 +4,12 @@ services:
     image: mysql:8.0
     container_name: kazenites-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: 12345678
-      MYSQL_DATABASE: kazenitesdb
-      MYSQL_USER: kazenites
-      MYSQL_PASSWORD: kazenites123
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
-      - "3307:3306"  # Use 3307 to avoid conflicts with local MySQL
+      - "3307:3306" # Use 3307 to avoid conflicts with local MySQL
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d
@@ -22,7 +22,7 @@ services:
 
   # Spring Boot Backend
   backend:
-    build: 
+    build:
       context: ./Kazenites-backend
       dockerfile: Dockerfile
     container_name: kazenites-backend
@@ -43,7 +43,15 @@ services:
     networks:
       - kazenites-network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/api/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080/api/health",
+        ]
       timeout: 10s
       retries: 5
       start_period: 30s
@@ -55,7 +63,7 @@ services:
       dockerfile: Dockerfile
     container_name: kazenites-frontend
     ports:
-      - "8081:8081"  # Metro bundler
+      - "8081:8081" # Metro bundler
     volumes:
       - ./Kazenites-frontend:/app
       - /app/node_modules
