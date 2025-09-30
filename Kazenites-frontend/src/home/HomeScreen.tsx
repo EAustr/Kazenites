@@ -189,7 +189,7 @@ export default function HomeScreen({
         {item.description || ''}
       </Text>
       <View style={styles.pillRow}>
-        <Text style={styles.pill}>{item.status}</Text>
+        {/* <Text style={styles.pill}>{item.status}</Text> */}
         {item.unit ? <Text style={styles.pill}>{item.unit}</Text> : null}
       </View>
     </View>
