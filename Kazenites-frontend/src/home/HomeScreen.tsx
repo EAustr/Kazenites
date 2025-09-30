@@ -165,9 +165,9 @@ export default function HomeScreen({
       setCreateTitle('');
       setCreatePrice('');
       setCreateCategoryId('');
-    setCreateDescription('');
-    setCreateCity('');
-    setCreateUnit('KG');
+      setCreateDescription('');
+      setCreateCity('');
+      setCreateUnit('KG');
       setCreateQuantity('');
       await fetchListings();
     } catch (e: any) {
@@ -320,6 +320,7 @@ export default function HomeScreen({
           style={styles.searchInput}
           returnKeyType="search"
           onSubmitEditing={fetchListings}
+          placeholderTextColor={'white'}
         />
         <TouchableOpacity style={styles.searchBtn} onPress={fetchListings}>
           <Text style={styles.searchBtnText}>Search</Text>
@@ -567,6 +568,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   guestNotice: {
+    marginTop: 20,
     marginHorizontal: 16,
     marginBottom: 12,
     padding: 20,
