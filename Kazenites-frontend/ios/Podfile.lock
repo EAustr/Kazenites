@@ -2368,6 +2368,34 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
+  - RNCPicker (2.11.2):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
   - SocketRocket (0.7.1)
   - Yoga (0.0.0)
 
@@ -2445,6 +2473,7 @@ DEPENDENCIES:
   - ReactCodegen (from `build/generated/ios`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
+  - "RNCPicker (from `../node_modules/@react-native-picker/picker`)"
   - SocketRocket (~> 0.7.1)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
@@ -2598,6 +2627,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   RNCAsyncStorage:
     :path: "../node_modules/@react-native-async-storage/async-storage"
+  RNCPicker:
+    :path: "../node_modules/@react-native-picker/picker"
   Yoga:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
@@ -2674,6 +2705,7 @@ SPEC CHECKSUMS:
   ReactCodegen: 3baedb0c33f963250c866151b825a3c5194b12f1
   ReactCommon: e897f9a1b4afab370cfefaaf5fb3c80371bc3937
   RNCAsyncStorage: c17c382a58c7db2582aba8f0874e1aa346e6af15
+  RNCPicker: 51992b3407f6b70ddb8e417ec5714c3f2d48d8a4
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: 11c9686a21e2cd82a094a723649d9f4507200fb0
 

@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import {
   ScrollView,
   View,
@@ -6,10 +6,13 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { API_BASE_URL } from '../config';
-import type { ListingUnit } from '../types';
+import type { Category, ListingUnit } from '../types';
 import { AuthContext } from '../auth/AuthContext';
+import { Picker } from '@react-native-picker/picker';
 
 type Props = {
   isGuest: boolean;
@@ -30,6 +33,11 @@ export default function CreateListingSection({
   const [createTitle, setCreateTitle] = useState('');
   const [createPrice, setCreatePrice] = useState('');
   const [createCategoryId, setCreateCategoryId] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryFetchError, setCategoryFetchError] = useState<string | null>(
+    null,
+  );
+  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [createDescription, setCreateDescription] = useState('');
   const [createCity, setCreateCity] = useState('');
   const [createUnit, setCreateUnit] = useState<ListingUnit>('KG');
@@ -37,6 +45,49 @@ export default function CreateListingSection({
   const [createMessage, setCreateMessage] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createLoading, setCreateLoading] = useState(false);
+  const [pendingCategoryId, setPendingCategoryId] = useState('');
+
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
+    const loadCategories = async () => {
+      try {
+        setCategoryFetchError(null);
+        const res = await fetch(`${API_BASE_URL}/api/categories`, {
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          throw new Error(`Failed to load categories (${res.status})`);
+        }
+
+        const data: Category[] = await res.json();
+        if (isMounted) {
+          setCategories(data);
+        }
+      } catch (err: any) {
+        if (isMounted && err?.name !== 'AbortError') {
+          setCategoryFetchError('Could not load categories. Try again later.');
+        }
+      }
+    };
+
+    loadCategories();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, []);
+
+  const selectedCategoryName = useMemo(() => {
+    if (!createCategoryId) {
+      return null;
+    }
+    const match = categories.find(cat => String(cat.id) === createCategoryId);
+    return match?.name ?? null;
+  }, [categories, createCategoryId]);
 
   const resetForm = () => {
     setCreateTitle('');
@@ -173,17 +224,99 @@ export default function CreateListingSection({
           }}
           style={styles.createInput}
         />
-        <TextInput
-          placeholder="Category ID"
-          placeholderTextColor="#94a3b8"
-          keyboardType="number-pad"
-          value={createCategoryId}
-          onChangeText={text => {
-            setCreateCategoryId(text);
-            setCreateError(null);
-          }}
-          style={styles.createInput}
-        />
+        <View style={styles.categoryPickerWrapper}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.categorySelect,
+              pressed && styles.categorySelectPressed,
+              !categories.length &&
+                !categoryFetchError &&
+                styles.categorySelectDisabled,
+            ]}
+            disabled={!categories.length && !categoryFetchError}
+            onPress={() => {
+              if (!categories.length && !categoryFetchError) {
+                return;
+              }
+              setPendingCategoryId(
+                createCategoryId || categories[0]?.id?.toString() || '',
+              );
+              setCategoryModalVisible(true);
+            }}
+          >
+            <Text
+              style={
+                selectedCategoryName
+                  ? styles.categorySelectedText
+                  : styles.categoryPlaceholderText
+              }
+              numberOfLines={1}
+            >
+              {selectedCategoryName ?? 'Select a category'}
+            </Text>
+            <Text style={styles.categoryChevron}>▼</Text>
+          </Pressable>
+          {categoryFetchError ? (
+            <Text style={styles.categoryError}>{categoryFetchError}</Text>
+          ) : null}
+        </View>
+        <Modal
+          transparent
+          animationType="slide"
+          visible={categoryModalVisible}
+          onRequestClose={() => setCategoryModalVisible(false)}
+        >
+          <View style={styles.categoryModalOverlay}>
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => setCategoryModalVisible(false)}
+            />
+            <View style={styles.categoryPickerSheet}>
+              <View style={styles.categoryPickerToolbar}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setPendingCategoryId(createCategoryId);
+                    setCategoryModalVisible(false);
+                  }}
+                  hitSlop={8}
+                >
+                  <Text style={styles.categoryToolbarText}>Cancel</Text>
+                </TouchableOpacity>
+                <Text style={styles.categoryToolbarTitle}>Category</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setCreateCategoryId(pendingCategoryId);
+                    setCreateError(null);
+                    setCategoryModalVisible(false);
+                  }}
+                  hitSlop={8}
+                >
+                  <Text
+                    style={[
+                      styles.categoryToolbarText,
+                      styles.categoryToolbarConfirm,
+                    ]}
+                  >
+                    Done
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <Picker
+                selectedValue={pendingCategoryId}
+                onValueChange={value => setPendingCategoryId(String(value))}
+              >
+                <Picker.Item label="Select a category" value="" />
+                {categories.map(category => (
+                  <Picker.Item
+                    key={category.id}
+                    label={category.name}
+                    value={String(category.id)}
+                  />
+                ))}
+              </Picker>
+            </View>
+          </View>
+        </Modal>
         <TextInput
           placeholder="City (optional)"
           placeholderTextColor="#94a3b8"
@@ -250,6 +383,95 @@ export default function CreateListingSection({
 }
 
 const styles = StyleSheet.create({
+  unitPickerWrapper: {
+    marginTop: 8,
+  },
+  unitLabel: {
+    color: '#0f172a',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  unitPicker: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 10,
+    backgroundColor: '#f1f5f9',
+  },
+  categoryPickerWrapper: {  
+    gap: 6,
+  },
+  categoryLabel: {
+    color: '#0f172a',
+    fontWeight: '600',
+  },
+  categorySelect: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 10,
+    backgroundColor: '#f1f5f9',
+  },
+  categorySelectPressed: {
+    backgroundColor: '#e2e8f0',
+  },
+  categorySelectDisabled: {
+    opacity: 0.6,
+  },
+  categorySelectedText: {
+    color: '#0f172a',
+    fontWeight: '600',
+    flex: 1,
+    marginRight: 8,
+  },
+  categoryPlaceholderText: {
+    color: '#94a3b8',
+    flex: 1,
+    marginRight: 8,
+  },
+  categoryChevron: {
+    color: '#475569',
+    fontSize: 16,
+  },
+  categoryError: {
+    color: '#b91c1c',
+    fontSize: 12,
+  },
+  categoryModalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  categoryPickerSheet: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+    flex: 0.45,
+  },
+  categoryPickerToolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e2e8f0',
+  },
+  categoryToolbarText: {
+    color: '#2563eb',
+    fontWeight: '600',
+  },
+  categoryToolbarConfirm: {
+    fontWeight: '700',
+  },
+  categoryToolbarTitle: {
+    color: '#0f172a',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   createScroll: { flex: 1, backgroundColor: '#f8fafc' },
   createScrollContent: { paddingBottom: 32 },
   createBox: {
