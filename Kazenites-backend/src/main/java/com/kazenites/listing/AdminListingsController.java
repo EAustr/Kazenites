@@ -29,16 +29,18 @@ public class AdminListingsController {
     @PostMapping("/{id}/approve")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void approve(@PathVariable Long id) {
-        Listing l = repo.findById(id).orElseThrow(() -> new ListingNotFoundException(id));
-        l.setStatus(ListingStatus.APPROVED);
-        repo.save(l);
-    }
+    Listing l = repo.findById(id).orElseThrow(() -> new ListingNotFoundException(id));
+    if(l.getStatus() != ListingStatus.PENDING) return;
+    l.setStatus(ListingStatus.APPROVED);
+    repo.save(l);
+}   
 
     @PostMapping("/{id}/reject")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void reject(@PathVariable Long id) {
-        Listing l = repo.findById(id).orElseThrow(() -> new ListingNotFoundException(id));
-        l.setStatus(ListingStatus.REJECTED);
-        repo.save(l);
+    Listing l = repo.findById(id).orElseThrow(() -> new ListingNotFoundException(id));
+    if (l.getStatus() != ListingStatus.PENDING) return;
+    l.setStatus(ListingStatus.REJECTED);
+    repo.save(l);
     }
 }
