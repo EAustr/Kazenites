@@ -28,18 +28,33 @@ public class ListingController {
     }
 
     @GetMapping
-    public List<Listing> list() {
-        return repo.findAll();
+    public List<Listing> list(@AuthenticationPrincipal UserPrincipal principal) {
+        boolean isAdmin = principal != null && principal.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (isAdmin) {
+            return repo.findAll();
+        }
+        return repo.findByStatusOrderByCreatedAtDesc(ListingStatus.APPROVED);
     }
 
     @GetMapping("/{id}")
-    public Listing get(@PathVariable Long id) {
-        return repo.findById(id).orElseThrow(() -> new ListingNotFoundException(id));
+    public Listing get(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+        Listing l = repo.findById(id).orElseThrow(() -> new ListingNotFoundException(id));
+        boolean isAdmin = principal != null && principal.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin && l.getStatus() != ListingStatus.APPROVED) {
+            throw new ListingForbiddenException();
+        }
+        return l;
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Listing create(@RequestBody ListingCreateRequest req, @AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) {
+            throw new ListingForbiddenException();
+        }
+
         Listing l = new Listing();
         l.setTitle(req.title);
         l.setDescription(req.description);
@@ -50,36 +65,28 @@ public class ListingController {
         l.setCity(req.city);
         l.setCategoryId(req.categoryId);
         l.setOwnerId(principal.getUser().getId());
-        l.setStatus(ListingStatus.PENDING); 
+        l.setStatus(ListingStatus.PENDING);
+
         return repo.save(l);
     }
 
     @PutMapping("/{id}")
     public Listing update(@PathVariable Long id, @RequestBody ListingUpdateRequest req,
-            @AuthenticationPrincipal UserPrincipal principal) {
+                          @AuthenticationPrincipal UserPrincipal principal) {
         Listing l = repo.findById(id).orElseThrow(() -> new ListingNotFoundException(id));
         boolean isOwner = l.getOwnerId().equals(principal.getUser().getId());
         boolean isAdmin = principal.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        if (!isOwner && !isAdmin)
-            throw new ListingForbiddenException();
+        if (!isOwner && !isAdmin) throw new ListingForbiddenException();
 
-        if (req.title != null)
-            l.setTitle(req.title);
-        if (req.description != null)
-            l.setDescription(req.description);
-        if (req.price != null)
-            l.setPrice(req.price);
-        if (req.currency != null)
-            l.setCurrency(req.currency);
-        if (req.quantity != null)
-            l.setQuantity(req.quantity);
-        if (req.unit != null)
-            l.setUnit(req.unit);
-        if (req.city != null)
-            l.setCity(req.city);
-        if (req.categoryId != null)
-            l.setCategoryId(req.categoryId);
-        // status managed via admin endpoints
+        if (req.title != null) l.setTitle(req.title);
+        if (req.description != null) l.setDescription(req.description);
+        if (req.price != null) l.setPrice(req.price);
+        if (req.currency != null) l.setCurrency(req.currency);
+        if (req.quantity != null) l.setQuantity(req.quantity);
+        if (req.unit != null) l.setUnit(req.unit);
+        if (req.city != null) l.setCity(req.city);
+        if (req.categoryId != null) l.setCategoryId(req.categoryId);
+
         return repo.save(l);
     }
 
@@ -89,8 +96,7 @@ public class ListingController {
         Listing l = repo.findById(id).orElseThrow(() -> new ListingNotFoundException(id));
         boolean isOwner = l.getOwnerId().equals(principal.getUser().getId());
         boolean isAdmin = principal.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        if (!isOwner && !isAdmin)
-            throw new ListingForbiddenException();
+        if (!isOwner && !isAdmin) throw new ListingForbiddenException();
         repo.deleteById(id);
     }
 }

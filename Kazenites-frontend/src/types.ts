@@ -20,3 +20,12 @@ export type Listing = {
   createdAt?: string;
   updatedAt?: string;
 };
+
+export type User = {
+  id: number;
+  email: string;
+  name: string;
+  surname: string;
+  role: string;
+  city?: string;
+};

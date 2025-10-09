@@ -2,14 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
-  TextInput,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_BASE_URL } from '../config';
 import type { Listing } from '../types';
 import CreateListingSection from './CreateListingSection';
@@ -27,6 +23,9 @@ export default function HomeScreen({
   onRegisterPress,
   onLogoutPress,
 }: Props) {
+  const { token, user } = useContext(AuthContext);
+
+  // Browse
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,59 +37,90 @@ export default function HomeScreen({
   };
 
   const fetchListings = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const url = q
+  setLoading(true);
+  setError(null);
+  try {
+    const url =
+      user?.role === 'ADMIN'
+        ? `${API_BASE_URL}/api/listings?all=true${q ? `&q=${encodeURIComponent(q)}` : ''}`
+        : q
         ? `${API_BASE_URL}/api/listings?q=${encodeURIComponent(q)}`
         : `${API_BASE_URL}/api/listings`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Failed to load listings (${res.status})`);
-      const json = await res.json();
-      setItems(json);
-    } catch (e: any) {
-      setError(e.message || 'Failed to load');
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  useEffect(() => {
-    fetchListings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const res = await fetch(url, {
+      headers: user?.role === 'ADMIN' && token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    if (!res.ok) throw new Error(`Failed to load listings (${res.status})`);
+    const json = await res.json();
+    setItems(json);
+  } catch (e: any) {
+    setError(e.message || 'Failed to load');
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const header = useMemo(
-    () => (
-      <SafeAreaView edges={['top']} style={styles.headerSafe}>
-        <View style={styles.header}>
-          <Text style={styles.brand}>Kazenites</Text>
-          <View style={styles.headerActions}>
-            {isGuest ? (
-              <>
-                <TouchableOpacity style={styles.linkBtn} onPress={onLoginPress}>
-                  <Text style={styles.linkText}>Login</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.linkBtn, styles.primaryBtn]}
-                  onPress={onRegisterPress}
-                >
-                  <Text style={[styles.linkText, styles.primaryText]}>
-                    Register
-                  </Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <TouchableOpacity style={styles.linkBtn} onPress={onLogoutPress}>
-                <Text style={styles.linkText}>Logout</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-      </SafeAreaView>
-    ),
-    [isGuest, onLoginPress, onRegisterPress, onLogoutPress],
-  );
+
+  // Fetch pending listings (admins only)
+const fetchPendingListings = async () => {
+  if (!user || user.role !== 'ADMIN') return;
+  if (!token) {
+    console.warn('No token for fetchPendingListings');
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/admin/listings`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`Failed to fetch pending listings (${res.status})`);
+    const json = await res.json();
+    setPendingListings(json);
+  } catch (e: any) {
+    console.error('fetchPendingListings error:', e);
+  }
+};
+
+const fetchUsers = async () => {
+  if (!user || user.role !== 'ADMIN') return;
+  if (!token) {
+    setUsersError('No token available');
+    return;
+  }
+  setUsersLoading(true);
+  setUsersError(null);
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/admin/users`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`Failed to fetch users (${res.status})`);
+    const json = await res.json();
+    setUsers(json);
+  } catch (e: any) {
+    setUsersError(e.message || 'Failed to load users');
+  } finally {
+    setUsersLoading(false);
+  }
+};
+
+const handleApprove = async (id: number) => {
+  if (!user || user.role !== 'ADMIN') return;
+  if (!token) {
+    console.warn('No token for approve');
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/admin/listings/${id}/approve`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`Approve failed (${res.status})`);
+    await fetchPendingListings();
+    await fetchListings();
+  } catch (e: any) {
+    console.error('handleApprove error:', e);
+  }
+};
+
 
   const renderItem = ({ item }: { item: Listing }) => (
     <View style={styles.card}>
@@ -100,7 +130,7 @@ export default function HomeScreen({
         </Text>
         <Text style={styles.cardPrice}>€{item.price.toFixed(2)}</Text>
       </View>
-      {item.city ? <Text style={styles.cardMeta}>{item.city}</Text> : null}
+      {item.city && <Text style={styles.cardMeta}>{item.city}</Text>}
       <Text style={styles.cardDesc} numberOfLines={2}>
         {item.description || ''}
       </Text>
@@ -149,7 +179,15 @@ export default function HomeScreen({
 
   return (
     <View style={styles.screen}>
-      {header}
+      <Header
+        isGuest={isGuest}
+        user={user}
+        onLoginPress={onLoginPress}
+        onRegisterPress={onRegisterPress}
+        onLogoutPress={onLogoutPress}
+        onAdminPress={() => setShowAdmin(true)}
+      />
+
       <View style={styles.tabBarWrapper}>
         <View style={styles.tabBar}>
           <TouchableOpacity
@@ -186,14 +224,64 @@ export default function HomeScreen({
           </TouchableOpacity>
         </View>
       </View>
+
       {activeTab === 'browse' ? (
-        renderBrowseContent()
+        <>
+          <View style={styles.searchRow}>
+            <TextInput
+              placeholder="Search listings..."
+              value={q}
+              onChangeText={setQ}
+              style={styles.searchInput}
+              returnKeyType="search"
+              onSubmitEditing={fetchListings}
+            />
+            <TouchableOpacity style={styles.searchBtn} onPress={fetchListings}>
+              <Text style={styles.searchBtnText}>Search</Text>
+            </TouchableOpacity>
+          </View>
+          {loading && (
+            <View style={styles.centerRow}>
+              <ActivityIndicator />
+            </View>
+          )}
+          {error && (
+            <View style={styles.centerRow}>
+              <Text style={styles.error}>{error}</Text>
+            </View>
+          )}
+          <FlatList
+            data={items}
+            renderItem={renderItem}
+            keyExtractor={x => String(x.id)}
+            contentContainerStyle={styles.list}
+            style={{ flex: 1 }}
+            ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+          />
+        </>
+      ) : isGuest ? (
+        <ScrollView style={styles.createScroll} contentContainerStyle={styles.createScrollContent} keyboardShouldPersistTaps="handled">
+          <GuestNotice onLoginPress={onLoginPress} onRegisterPress={onRegisterPress} />
+        </ScrollView>
       ) : (
         <CreateListingSection
           isGuest={isGuest}
           onLoginPress={onLoginPress}
           onRegisterPress={onRegisterPress}
           onCreated={fetchListings}
+        />
+      )}
+
+      {showAdmin && user?.role === 'ADMIN' && (
+        <AdminPanel
+          pendingListings={pendingListings}
+          users={users}
+          usersLoading={usersLoading}
+          usersError={usersError}
+          onApprove={handleApprove}
+          onReject={handleReject}
+          fetchUsers={fetchUsers}
+          onClose={() => setShowAdmin(false)}
         />
       )}
     </View>
