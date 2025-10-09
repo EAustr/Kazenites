@@ -255,6 +255,7 @@ export default function HomeScreen({
           <View style={styles.searchRow}>
             <TextInput
               placeholder="Search listings..."
+              placeholderTextColor="#94a3b8"
               value={q}
               onChangeText={setQ}
               style={styles.searchInput}
