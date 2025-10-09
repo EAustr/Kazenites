@@ -138,13 +138,27 @@ export function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, gap: 12, justifyContent: 'center' },
+  container: {
+    flex: 1,
+    padding: 24,
+    gap: 12,
+    justifyContent: 'center',
+    backgroundColor: '#f8fafc',
+  },
   title: {
     fontSize: 24,
     fontWeight: '600',
     marginBottom: 8,
     textAlign: 'center',
+    color: '#0f172a',
   },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 },
-  error: { color: '#b00020' },
+  input: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: '#ffffff',
+    color: '#0f172a',
+  },
+  error: { color: '#b91c1c' },
 });

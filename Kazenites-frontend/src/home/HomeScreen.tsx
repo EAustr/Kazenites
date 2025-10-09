@@ -1,22 +1,14 @@
-// C:\25.09\Kazenites\Kazenites-frontend\src\home\HomeScreen.tsx
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
   FlatList,
-  ScrollView,
-  TextInput,
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
 import { API_BASE_URL } from '../config';
-import type { Listing, ListingUnit, User } from '../types';
-import { AuthContext } from '../auth/AuthContext';
-import Header from '../home/Header';
-import CreateForm from '../home/CreateForm';
-import GuestNotice from '../home/Guest';
-import AdminPanel from '../home/AdminPanel';
-import { styles } from '../styles';
+import type { Listing } from '../types';
+import CreateListingSection from './CreateListingSection';
 
 type Props = {
   isGuest: boolean;
@@ -38,29 +30,11 @@ export default function HomeScreen({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<Listing[]>([]);
-
-  // Create Form
-  const [createTitle, setCreateTitle] = useState('');
-  const [createPrice, setCreatePrice] = useState('');
-  const [createCategoryId, setCreateCategoryId] = useState('');
-  const [createDescription, setCreateDescription] = useState('');
-  const [createCity, setCreateCity] = useState('');
-  const [createUnit, setCreateUnit] = useState<ListingUnit>('KG');
-  const [createQuantity, setCreateQuantity] = useState('');
-  const [createMessage, setCreateMessage] = useState<string | null>(null);
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [createLoading, setCreateLoading] = useState(false);
-  const unitOptions: ListingUnit[] = ['KG', 'G'];
-
-  // Tabs
   const [activeTab, setActiveTab] = useState<'browse' | 'create'>('browse');
 
-  // Admin Panel
-  const [showAdmin, setShowAdmin] = useState(false);
-  const [pendingListings, setPendingListings] = useState<Listing[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [usersLoading, setUsersLoading] = useState(false);
-  const [usersError, setUsersError] = useState<string | null>(null);
+  const handleTabPress = (tab: 'browse' | 'create') => {
+    setActiveTab(tab);
+  };
 
   const fetchListings = async () => {
   setLoading(true);
@@ -148,93 +122,7 @@ const handleApprove = async (id: number) => {
 };
 
 
-const handleReject = async (id: number) => {
-  if (!user || user.role !== 'ADMIN') return;
-  if (!token) {
-    console.warn('No token for reject');
-    return;
-  }
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/admin/listings/${id}/reject`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) throw new Error(`Reject failed (${res.status})`);
-    await fetchPendingListings();
-    await fetchListings();
-  } catch (e: any) {
-    console.error('handleReject error:', e);
-  }
-};
-
-  // Create Listing
-  const handleCreateListing = async () => {
-    if (isGuest || !token) {
-      setCreateError('You must be logged in to create a listing.');
-      return;
-    }
-    const priceValue = Number(createPrice);
-    if (!createTitle.trim()) return setCreateError('Title is required.');
-    if (Number.isNaN(priceValue) || priceValue <= 0) return setCreateError('Enter a valid price.');
-    const categoryValue = Number(createCategoryId);
-    if (!createCategoryId.trim() || Number.isNaN(categoryValue))
-      return setCreateError('Provide a category ID (number).');
-
-    setCreateError(null);
-    setCreateMessage(null);
-    setCreateLoading(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/listings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: createTitle.trim(),
-          description: createDescription.trim() || undefined,
-          price: priceValue,
-          currency: 'EUR',
-          quantity: createQuantity ? Number(createQuantity) : undefined,
-          unit: createUnit,
-          city: createCity.trim() || undefined,
-          categoryId: categoryValue,
-        }),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `Create failed (${res.status})`);
-      }
-      setCreateMessage('Listing submitted! Pending approval.');
-      setCreateTitle('');
-      setCreatePrice('');
-      setCreateCategoryId('');
-      setCreateDescription('');
-      setCreateCity('');
-      setCreateUnit('KG');
-      setCreateQuantity('');
-      await fetchListings();
-      await fetchPendingListings();
-    } catch (e: any) {
-      setCreateError(e?.message ?? 'Failed to create listing');
-    } finally {
-      setCreateLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchListings();
-    fetchPendingListings();
-    fetchUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  const handleTabPress = (tab: 'browse' | 'create') => setActiveTab(tab);
-
-  const renderItem = ({ item }: { item: Listing }) => {
-  const isPending = item.status === 'PENDING' && user?.role === 'ADMIN';
-
-  return (
+  const renderItem = ({ item }: { item: Listing }) => (
     <View style={styles.card}>
       <View style={styles.cardRow}>
         <Text style={styles.cardTitle} numberOfLines={1}>
@@ -247,20 +135,47 @@ const handleReject = async (id: number) => {
         {item.description || ''}
       </Text>
       <View style={styles.pillRow}>
-        <Text
-          style={[
-            styles.pill,
-            isPending && { backgroundColor: '#fbbf24', color: '#000' },
-          ]}
-        >
-          {item.status}
-        </Text>
-        {item.unit && <Text style={styles.pill}>{item.unit}</Text>}
+        {item.unit ? <Text style={styles.pill}>{item.unit}</Text> : null}
       </View>
     </View>
   );
-};
 
+  const renderBrowseContent = () => (
+    <>
+      <View style={styles.searchRow}>
+        <TextInput
+          placeholder="Search listings..."
+          value={q}
+          onChangeText={setQ}
+          style={styles.searchInput}
+          returnKeyType="search"
+          onSubmitEditing={fetchListings}
+          placeholderTextColor="#94a3b8"
+        />
+        <TouchableOpacity style={styles.searchBtn} onPress={fetchListings}>
+          <Text style={styles.searchBtnText}>Search</Text>
+        </TouchableOpacity>
+      </View>
+      {loading && (
+        <View style={styles.centerRow}>
+          <ActivityIndicator />
+        </View>
+      )}
+      {error && (
+        <View style={styles.centerRow}>
+          <Text style={styles.error}>{error}</Text>
+        </View>
+      )}
+      <FlatList
+        data={items}
+        renderItem={renderItem}
+        keyExtractor={x => String(x.id)}
+        contentContainerStyle={styles.list}
+        style={{ flex: 1 }}
+        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+      />
+    </>
+  );
 
   return (
     <View style={styles.screen}>
@@ -276,18 +191,34 @@ const handleReject = async (id: number) => {
       <View style={styles.tabBarWrapper}>
         <View style={styles.tabBar}>
           <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'browse' && styles.tabButtonActive]}
+            style={[
+              styles.tabButton,
+              activeTab === 'browse' && styles.tabButtonActive,
+            ]}
             onPress={() => handleTabPress('browse')}
           >
-            <Text style={[styles.tabButtonText, activeTab === 'browse' && styles.tabButtonTextActive]}>
+            <Text
+              style={[
+                styles.tabButtonText,
+                activeTab === 'browse' && styles.tabButtonTextActive,
+              ]}
+            >
               Browse
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'create' && styles.tabButtonActive]}
+            style={[
+              styles.tabButton,
+              activeTab === 'create' && styles.tabButtonActive,
+            ]}
             onPress={() => handleTabPress('create')}
           >
-            <Text style={[styles.tabButtonText, activeTab === 'create' && styles.tabButtonTextActive]}>
+            <Text
+              style={[
+                styles.tabButtonText,
+                activeTab === 'create' && styles.tabButtonTextActive,
+              ]}
+            >
               Create
             </Text>
           </TouchableOpacity>
@@ -333,29 +264,12 @@ const handleReject = async (id: number) => {
           <GuestNotice onLoginPress={onLoginPress} onRegisterPress={onRegisterPress} />
         </ScrollView>
       ) : (
-        <ScrollView style={styles.createScroll} contentContainerStyle={styles.createScrollContent} keyboardShouldPersistTaps="handled">
-          <CreateForm
-            createTitle={createTitle}
-            setCreateTitle={setCreateTitle}
-            createPrice={createPrice}
-            setCreatePrice={setCreatePrice}
-            createCategoryId={createCategoryId}
-            setCreateCategoryId={setCreateCategoryId}
-            createCity={createCity}
-            setCreateCity={setCreateCity}
-            createQuantity={createQuantity}
-            setCreateQuantity={setCreateQuantity}
-            createDescription={createDescription}
-            setCreateDescription={setCreateDescription}
-            createUnit={createUnit}
-            setCreateUnit={setCreateUnit}
-            unitOptions={unitOptions}
-            createError={createError}
-            createMessage={createMessage}
-            createLoading={createLoading}
-            handleCreateListing={handleCreateListing}
-          />
-        </ScrollView>
+        <CreateListingSection
+          isGuest={isGuest}
+          onLoginPress={onLoginPress}
+          onRegisterPress={onRegisterPress}
+          onCreated={fetchListings}
+        />
       )}
 
       {showAdmin && user?.role === 'ADMIN' && (
@@ -373,3 +287,114 @@ const handleReject = async (id: number) => {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: '#f8fafc' },
+  headerSafe: { backgroundColor: '#f8fafc' },
+  header: {
+    paddingTop: Platform.select({ ios: 12, android: 8 }),
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    backgroundColor: '#ffffff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  brand: { color: '#0f172a', fontSize: 20, fontWeight: '700' },
+  headerActions: { flexDirection: 'row', gap: 8 },
+  linkBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#e2e8f0',
+  },
+  linkText: { color: '#1e293b', fontWeight: '600' },
+  primaryBtn: { backgroundColor: '#2563eb' },
+  primaryText: { color: 'white' },
+  searchRow: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 8,
+    backgroundColor: '#f8fafc',
+  },
+  searchInput: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    color: '#0f172a',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  searchBtn: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    justifyContent: 'center',
+  },
+  searchBtnText: { color: 'white', fontWeight: '700' },
+  tabBarWrapper: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    backgroundColor: '#f8fafc',
+  },
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#e2e8f0',
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
+  },
+  tabButton: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  tabButtonActive: {
+    backgroundColor: '#2563eb',
+  },
+  tabButtonText: {
+    color: '#475569',
+    fontWeight: '600',
+  },
+  tabButtonTextActive: {
+    color: 'white',
+    fontWeight: '700',
+  },
+  list: { padding: 16 },
+  card: {
+    backgroundColor: '#ffffff',
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  cardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cardTitle: {
+    color: '#0f172a',
+    fontSize: 16,
+    fontWeight: '700',
+    flex: 1,
+    marginRight: 8,
+  },
+  cardPrice: { color: '#2563eb', fontWeight: '800' },
+  cardMeta: { color: '#64748b', marginTop: 4 },
+  cardDesc: { color: '#475569', marginTop: 6 },
+  pillRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  pill: {
+    color: '#475569',
+    backgroundColor: '#e2e8f0',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  centerRow: { paddingHorizontal: 16, paddingVertical: 8 },
+  error: { color: '#b91c1c' },
+});
