@@ -14,7 +14,7 @@ import { AuthContext } from '../auth/AuthContext';
 import Header from '../home/Header';
 import CreateListingSection from '../home/CreateListingSection';
 import GuestNotice from '../home/Guest';
-import AdminPanel from '../home/AdminPanel';
+import AdminPanel from '../admin/AdminPanel';
 import { styles } from '../styles';
 
 type Props = {
