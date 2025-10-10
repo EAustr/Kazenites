@@ -20,6 +20,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AuthProvider, AuthContext } from './src/auth/AuthContext';
 import { LoginScreen, RegisterScreen } from './src/auth/AuthScreens';
 import HomeScreen from './src/home/HomeScreen';
+import ProfilePage from './src/profile/profilePage';
 
 function App() {
   return (
@@ -39,11 +40,15 @@ function App() {
 function RootNavigator() {
   const { user, logout } = useContext(AuthContext);
   const [authView, setAuthView] = useState<null | 'login' | 'register'>(null);
+  const [showProfile, setShowProfile] = useState(false);
 
   if (!user) {
     if (authView === 'login' || authView === 'register') {
       return (
-        <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+        <SafeAreaView
+          edges={['top']}
+          style={{ flex: 1, backgroundColor: '#f8fafc' }}
+        >
           <View
             style={{
               backgroundColor: '#ffffff',
@@ -80,7 +85,18 @@ function RootNavigator() {
     );
   }
 
-  return <HomeScreen isGuest={false} onLogoutPress={logout} />;
+  // Show profile page if requested
+  if (showProfile) {
+    return <ProfilePage onBack={() => setShowProfile(false)} />;
+  }
+
+  return (
+    <HomeScreen
+      isGuest={false}
+      onLogoutPress={logout}
+      onProfilePress={() => setShowProfile(true)}
+    />
+  );
 }
 
 function AppContent({ onLogout }: { onLogout: () => void }) {
@@ -154,7 +170,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f8fafc',
   },
-  title: { fontSize: 24, fontWeight: '700', textAlign: 'center', color: '#0f172a' },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    textAlign: 'center',
+    color: '#0f172a',
+  },
   subtitle: { fontSize: 16, textAlign: 'center', color: '#475569' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   block: {

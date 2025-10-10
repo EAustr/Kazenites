@@ -99,4 +99,9 @@ public class ListingController {
         if (!isOwner && !isAdmin) throw new ListingForbiddenException();
         repo.deleteById(id);
     }
+
+    @GetMapping("/my-listings")
+    public List<Listing> getMyListings(@AuthenticationPrincipal UserPrincipal principal) {
+        return repo.findByOwnerIdOrderByCreatedAtDesc(principal.getUser().getId());
+    }
 }

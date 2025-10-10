@@ -22,6 +22,7 @@ type Props = {
   onLoginPress?: () => void;
   onRegisterPress?: () => void;
   onLogoutPress?: () => void;
+  onProfilePress?: () => void;
 };
 
 export default function HomeScreen({
@@ -29,6 +30,7 @@ export default function HomeScreen({
   onLoginPress,
   onRegisterPress,
   onLogoutPress,
+  onProfilePress,
 }: Props) {
   const { token, user } = useContext(AuthContext);
 
@@ -211,6 +213,7 @@ export default function HomeScreen({
         onRegisterPress={onRegisterPress}
         onLogoutPress={onLogoutPress}
         onAdminPress={() => setShowAdmin(true)}
+        onProfilePress={onProfilePress}
       />
 
       <View style={styles.tabBarWrapper}>

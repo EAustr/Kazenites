@@ -10,6 +10,7 @@ type Props = {
   onRegisterPress?: () => void;
   onLogoutPress?: () => void;
   onAdminPress?: () => void;
+  onProfilePress?: () => void;
 };
 
 export default function Header({
@@ -19,6 +20,7 @@ export default function Header({
   onRegisterPress,
   onLogoutPress,
   onAdminPress,
+  onProfilePress,
 }: Props) {
   return (
     <SafeAreaView edges={['top']} style={styles.headerSafe}>
@@ -34,11 +36,17 @@ export default function Header({
                 style={[styles.linkBtn, styles.primaryBtn]}
                 onPress={onRegisterPress}
               >
-                <Text style={[styles.linkText, styles.primaryText]}>Register</Text>
+                <Text style={[styles.linkText, styles.primaryText]}>
+                  Register
+                </Text>
               </TouchableOpacity>
             </>
           ) : (
             <>
+              {/* Profile button */}
+              <TouchableOpacity style={styles.linkBtn} onPress={onProfilePress}>
+                <Text style={styles.linkText}>Profile</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={styles.linkBtn} onPress={onLogoutPress}>
                 <Text style={styles.linkText}>Logout</Text>
               </TouchableOpacity>
@@ -47,7 +55,9 @@ export default function Header({
                   style={[styles.linkBtn, styles.primaryBtn]}
                   onPress={onAdminPress}
                 >
-                  <Text style={[styles.linkText, styles.primaryText]}>Admin</Text>
+                  <Text style={[styles.linkText, styles.primaryText]}>
+                    Admin
+                  </Text>
                 </TouchableOpacity>
               )}
             </>
