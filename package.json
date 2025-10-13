@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@react-native-picker/picker": "^2.11.2"
+  },
+  "devDependencies": {
+    "@react-native-community/cli": "^20.0.2"
+  }
+}
