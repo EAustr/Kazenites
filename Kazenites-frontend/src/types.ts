@@ -6,6 +6,8 @@ export type Category = {
 
 export type ListingStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
+export type ListingUnit = 'KG' | 'G';
+
 export type Listing = {
   id: number;
   title: string;
@@ -14,6 +16,16 @@ export type Listing = {
   city?: string | null;
   categoryId: number;
   status: ListingStatus;
+  unit?: ListingUnit;
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type User = {
+  id: number;
+  email: string;
+  name: string;
+  surname: string;
+  role: string;
+  city?: string;
 };

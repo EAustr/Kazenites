@@ -1,7 +1,11 @@
 package com.kazenites.listing;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
 
 public interface ListingRepository extends JpaRepository<Listing, Long> {
-    java.util.List<Listing> findByStatusOrderByCreatedAtDesc(ListingStatus status);
+    List<Listing> findByStatus(ListingStatus status);
+    List<Listing> findByStatusOrderByCreatedAtDesc(ListingStatus status);
+    List<Listing> findByOwnerId(Long ownerId);
+    List<Listing> findByOwnerIdOrderByCreatedAtDesc(Long ownerId);
 }

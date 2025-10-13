@@ -32,23 +32,32 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/api/health", "/api/auth/**", "/uploads/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/categories", "/api/categories/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/listings", "/api/listings/**").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/api/listings/**").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/api/listings/**").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/listings", "/api/listings/**").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .anyRequest().authenticated())
-                .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-        return http.build();
-    }
+public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    http
+        .csrf(csrf -> csrf.disable())
+        .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(auth -> auth
+            // Public 
+            .requestMatchers("/", "/api/health", "/api/auth/**", "/uploads/**").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/listings/**").permitAll()
+
+            // Authenticated user 
+            .requestMatchers(HttpMethod.POST, "/api/listings/**").authenticated()
+            .requestMatchers(HttpMethod.PUT, "/api/listings/**").authenticated()
+            .requestMatchers(HttpMethod.DELETE, "/api/listings/**").authenticated()
+
+            // Admin 
+            .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+            .anyRequest().authenticated()
+        )
+        .authenticationProvider(authenticationProvider())
+        .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
+    return http.build();
+}
+
 
     // Prevent servlet container from auto-registering the JWT filter outside the
     // security chain

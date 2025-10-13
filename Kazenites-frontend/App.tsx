@@ -9,7 +9,6 @@ import React, { useCallback, useMemo, useState, useContext } from 'react';
 import {
   StatusBar,
   StyleSheet,
-  useColorScheme,
   View,
   Text,
   Button,
@@ -21,16 +20,15 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AuthProvider, AuthContext } from './src/auth/AuthContext';
 import { LoginScreen, RegisterScreen } from './src/auth/AuthScreens';
 import HomeScreen from './src/home/HomeScreen';
+import ProfilePage from './src/profile/profilePage';
 
 function App() {
-  const isDarkMode = useColorScheme() === 'dark';
-
   return (
     <SafeAreaProvider>
       <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        barStyle="dark-content"
         translucent={false}
-        backgroundColor="#0b0f14"
+        backgroundColor="#f8fafc"
       />
       <AuthProvider>
         <RootNavigator />
@@ -42,20 +40,37 @@ function App() {
 function RootNavigator() {
   const { user, logout } = useContext(AuthContext);
   const [authView, setAuthView] = useState<null | 'login' | 'register'>(null);
+  const [showProfile, setShowProfile] = useState(false);
 
   if (!user) {
     if (authView === 'login' || authView === 'register') {
       return (
-        <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#0b0f14' }}>
-          <View style={{ backgroundColor: '#0b0f14', paddingHorizontal: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity onPress={() => setAuthView(null)} style={{ paddingVertical: 6, paddingRight: 12 }}>
-              <Text style={{ color: '#93c5fd', fontWeight: '600' }}>Back</Text>
+        <SafeAreaView
+          edges={['top']}
+          style={{ flex: 1, backgroundColor: '#f8fafc' }}
+        >
+          <View
+            style={{
+              backgroundColor: '#ffffff',
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              borderBottomWidth: 1,
+              borderBottomColor: '#e2e8f0',
+            }}
+          >
+            <TouchableOpacity
+              onPress={() => setAuthView(null)}
+              style={{ paddingVertical: 6, paddingRight: 12 }}
+            >
+              <Text style={{ color: '#2563eb', fontWeight: '600' }}>Back</Text>
             </TouchableOpacity>
-            <Text style={{ color: 'white', fontSize: 18, fontWeight: '700' }}>
+            <Text style={{ color: '#0f172a', fontSize: 18, fontWeight: '700' }}>
               {authView === 'login' ? 'Login' : 'Register'}
             </Text>
           </View>
-          <View style={{ flex: 1, backgroundColor: 'white' }}>
+          <View style={{ flex: 1, backgroundColor: '#f8fafc' }}>
             {authView === 'login' ? <LoginScreen /> : <RegisterScreen />}
           </View>
         </SafeAreaView>
@@ -70,7 +85,18 @@ function RootNavigator() {
     );
   }
 
-  return <HomeScreen isGuest={false} onLogoutPress={logout} />;
+  // Show profile page if requested
+  if (showProfile) {
+    return <ProfilePage onBack={() => setShowProfile(false)} />;
+  }
+
+  return (
+    <HomeScreen
+      isGuest={false}
+      onLogoutPress={logout}
+      onProfilePress={() => setShowProfile(true)}
+    />
+  );
 }
 
 function AppContent({ onLogout }: { onLogout: () => void }) {
@@ -142,25 +168,33 @@ const styles = StyleSheet.create({
     gap: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f8fafc',
   },
-  title: { fontSize: 24, fontWeight: '700', textAlign: 'center' },
-  subtitle: { fontSize: 16, opacity: 0.8, textAlign: 'center' },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    textAlign: 'center',
+    color: '#0f172a',
+  },
+  subtitle: { fontSize: 16, textAlign: 'center', color: '#475569' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   block: {
     padding: 12,
-    backgroundColor: '#f2f2f2',
+    backgroundColor: '#ffffff',
     borderRadius: 8,
     width: '90%',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   noteBlock: { paddingTop: 12 },
-  note: { fontSize: 12, opacity: 0.6, textAlign: 'center' },
-  info: { marginLeft: 8, textAlign: 'center' },
+  note: { fontSize: 12, textAlign: 'center', color: '#64748b' },
+  info: { marginLeft: 8, textAlign: 'center', color: '#475569' },
   code: {
     fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace' }),
     fontSize: 12,
     textAlign: 'center',
   },
-  error: { color: '#b00020', textAlign: 'center' },
+  error: { color: '#b91c1c', textAlign: 'center' },
 });
 
 export default App;
