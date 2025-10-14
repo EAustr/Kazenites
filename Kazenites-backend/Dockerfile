@@ -9,8 +9,9 @@ COPY gradle gradle
 COPY build.gradle .
 COPY settings.gradle .
 
-# Make gradlew executable
-RUN chmod +x ./gradlew
+# Normalize line endings (in case file was checked out with CRLF on Windows)
+# and make gradlew executable so the shebang works inside the Alpine builder image.
+RUN sed -i 's/\r$//' ./gradlew && chmod +x ./gradlew
 
 # Download dependencies (cached layer)
 RUN ./gradlew dependencies --no-daemon
@@ -28,7 +29,7 @@ WORKDIR /app
 
 # Create non-root user
 RUN addgroup -g 1001 -S appuser && \
-    adduser -S appuser -u 1001
+  adduser -S appuser -u 1001
 
 # Create uploads directory
 RUN mkdir -p uploads && chown appuser:appuser uploads

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary app color used for launcher foreground/background -->
+    <color name="launcher_background">#5c209c</color>
+    <color name="launcher_foreground">#5c209c</color>
+</resources>
