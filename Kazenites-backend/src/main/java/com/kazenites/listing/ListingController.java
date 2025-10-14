@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import com.kazenites.listing.dto.ListingCreateRequest;
 import com.kazenites.listing.dto.ListingUpdateRequest;
@@ -28,11 +29,26 @@ public class ListingController {
     }
 
     @GetMapping
-    public List<Listing> list(@AuthenticationPrincipal UserPrincipal principal) {
+    public List<Listing> list(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(value = "q", required = false) String q,
+            @RequestParam(value = "all", required = false, defaultValue = "false") boolean all) {
+
         boolean isAdmin = principal != null && principal.getAuthorities().stream()
-            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        if (isAdmin) {
-            return repo.findAll();
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        String term = (q == null || q.isBlank()) ? null : q.trim();
+
+        if (isAdmin && all) {
+            if (term != null) {
+                return repo.findByTitleContainingIgnoreCaseOrderByCreatedAtDesc(term);
+            }
+            return repo.findAll(); // admin full list (unchanged behavior)
+        }
+
+        // Non-admin (or admin without all=true): only APPROVED
+        if (term != null) {
+            return repo.findByStatusAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(ListingStatus.APPROVED, term);
         }
         return repo.findByStatusOrderByCreatedAtDesc(ListingStatus.APPROVED);
     }
