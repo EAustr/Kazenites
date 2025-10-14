@@ -22,6 +22,9 @@ type Props = {
 };
 
 const unitOptions: ListingUnit[] = ['KG', 'G'];
+const alphaSpacePattern = /^[\p{L}]+(?:\s[\p{L}]+)*$/u;
+const cityPattern = alphaSpacePattern;
+const titlePattern = alphaSpacePattern;
 
 export default function CreateListingSection({
   isGuest,
@@ -111,9 +114,23 @@ export default function CreateListingSection({
       setCreateError('Title is required.');
       return;
     }
+    if (!titlePattern.test(createTitle.trim())) {
+      setCreateError('Title may contain only letters and spaces.');
+      return;
+    }
 
     if (Number.isNaN(priceValue) || priceValue <= 0) {
       setCreateError('Enter a valid price.');
+      return;
+    }
+
+    if (!createCity.trim()) {
+      setCreateError('City is required.');
+      return;
+    }
+
+    if (!cityPattern.test(createCity.trim())) {
+      setCreateError('City may contain only letters and spaces.');
       return;
     }
 
@@ -141,7 +158,7 @@ export default function CreateListingSection({
           currency: 'EUR',
           quantity: createQuantity ? Number(createQuantity) : undefined,
           unit: createUnit,
-          city: createCity.trim() || undefined,
+          city: createCity.trim(),
           categoryId: categoryValue,
         }),
       });
@@ -230,8 +247,8 @@ export default function CreateListingSection({
               styles.categorySelect,
               pressed && styles.categorySelectPressed,
               !categories.length &&
-                !categoryFetchError &&
-                styles.categorySelectDisabled,
+              !categoryFetchError &&
+              styles.categorySelectDisabled,
             ]}
             disabled={!categories.length && !categoryFetchError}
             onPress={() => {
@@ -318,10 +335,13 @@ export default function CreateListingSection({
           </View>
         </Modal>
         <TextInput
-          placeholder="City (optional)"
+          placeholder="City"
           placeholderTextColor="#94a3b8"
           value={createCity}
-          onChangeText={setCreateCity}
+          onChangeText={text => {
+            setCreateCity(text);
+            setCreateError(null);
+          }}
           style={styles.createInput}
         />
         <TextInput
@@ -397,7 +417,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: '#f1f5f9',
   },
-  categoryPickerWrapper: {  
+  categoryPickerWrapper: {
     gap: 6,
   },
   categoryLabel: {

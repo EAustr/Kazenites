@@ -45,6 +45,7 @@ public class Listing {
     @Column(nullable = false)
     private ListingMUnits unit = ListingMUnits.KG;
 
+    @Column(nullable = false)
     private String city;
 
     @Column(name = "category_id", nullable = false)

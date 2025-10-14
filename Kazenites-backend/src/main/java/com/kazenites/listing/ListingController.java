@@ -19,6 +19,8 @@ import com.kazenites.listing.dto.ListingCreateRequest;
 import com.kazenites.listing.dto.ListingUpdateRequest;
 import com.kazenites.security.UserPrincipal;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/listings")
 public class ListingController {
@@ -43,10 +45,9 @@ public class ListingController {
             if (term != null) {
                 return repo.findByTitleContainingIgnoreCaseOrderByCreatedAtDesc(term);
             }
-            return repo.findAll(); // admin full list (unchanged behavior)
+            return repo.findAll();
         }
 
-        // Non-admin (or admin without all=true): only APPROVED
         if (term != null) {
             return repo.findByStatusAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(ListingStatus.APPROVED, term);
         }
@@ -66,7 +67,7 @@ public class ListingController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Listing create(@RequestBody ListingCreateRequest req, @AuthenticationPrincipal UserPrincipal principal) {
+    public Listing create(@Valid @RequestBody ListingCreateRequest req, @AuthenticationPrincipal UserPrincipal principal) {
         if (principal == null) {
             throw new ListingForbiddenException();
         }
@@ -87,7 +88,7 @@ public class ListingController {
     }
 
     @PutMapping("/{id}")
-    public Listing update(@PathVariable Long id, @RequestBody ListingUpdateRequest req,
+    public Listing update(@PathVariable Long id, @Valid @RequestBody ListingUpdateRequest req,
                           @AuthenticationPrincipal UserPrincipal principal) {
         Listing l = repo.findById(id).orElseThrow(() -> new ListingNotFoundException(id));
         boolean isOwner = l.getOwnerId().equals(principal.getUser().getId());
