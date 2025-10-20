@@ -260,4 +260,45 @@ export const profileStyles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 8,
   },
+  listingActions: {
+  flexDirection: 'row',
+  gap: 8,
+  marginTop: 8,
+},
+actionButton: {
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  borderRadius: 10,
+  marginRight: 8,
+},
+editBtn: {
+  backgroundColor: '#2563eb',
+},
+deleteBtn: {
+  backgroundColor: '#ef4444',
+},
+republishBtn: {
+  backgroundColor: '#16a34a',
+},
+actionText: {
+  color: 'white',
+  fontWeight: '600',
+},
+modalHeader: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: 12,
+  borderBottomWidth: 1,
+  borderBottomColor: '#e6eefc',
+},
+modalClose: {
+  color: '#2563eb',
+  fontWeight: '700',
+},
+modalTitle: {
+  fontWeight: '700',
+  fontSize: 16,
+},
+
 });
