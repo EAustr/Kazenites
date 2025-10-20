@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.kazenites.listing.dto.ListingCreateRequest;
 import com.kazenites.listing.dto.ListingUpdateRequest;
@@ -72,11 +73,20 @@ public class ListingController {
 
     @PutMapping("/{id}")
     public Listing update(@PathVariable Long id, @RequestBody ListingUpdateRequest req,
-                          @AuthenticationPrincipal UserPrincipal principal) {
-        Listing l = repo.findById(id).orElseThrow(() -> new ListingNotFoundException(id));
-        boolean isOwner = l.getOwnerId().equals(principal.getUser().getId());
-        boolean isAdmin = principal.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        if (!isOwner && !isAdmin) throw new ListingForbiddenException();
+                      @AuthenticationPrincipal UserPrincipal principal) {
+    Listing l = repo.findById(id).orElseThrow(() -> new ListingNotFoundException(id));
+
+    if (principal == null) {
+        throw new ListingForbiddenException();
+    }
+
+    boolean isOwner = l.getOwnerId().equals(principal.getUser().getId());
+    boolean isAdmin = principal.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+    if (!isOwner && !isAdmin) throw new ListingForbiddenException();
+
+    if (isOwner && !isAdmin && l.getStatus() == ListingStatus.APPROVED) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Approved listings cannot be edited by the owner.");
+    }
 
         if (req.title != null) l.setTitle(req.title);
         if (req.description != null) l.setDescription(req.description);
@@ -88,6 +98,27 @@ public class ListingController {
         if (req.categoryId != null) l.setCategoryId(req.categoryId);
 
         return repo.save(l);
+    }
+
+    @PutMapping("/{id}/republish")
+    public Listing republish(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+    Listing l = repo.findById(id).orElseThrow(() -> new ListingNotFoundException(id));
+
+    if (principal == null) {
+        throw new ListingForbiddenException();
+    }
+
+    boolean isOwner = l.getOwnerId().equals(principal.getUser().getId());
+    if (!isOwner) {
+        throw new ListingForbiddenException();
+    }
+
+    if (l.getStatus() != ListingStatus.REJECTED) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only rejected listings can be republished.");
+    }
+
+    l.setStatus(ListingStatus.PENDING);
+    return repo.save(l);
     }
 
     @DeleteMapping("/{id}")

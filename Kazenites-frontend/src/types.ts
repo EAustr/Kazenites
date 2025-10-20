@@ -19,6 +19,7 @@ export type Listing = {
   unit?: ListingUnit;
   createdAt?: string;
   updatedAt?: string;
+  quantity?: number;
 };
 
 export type User = {

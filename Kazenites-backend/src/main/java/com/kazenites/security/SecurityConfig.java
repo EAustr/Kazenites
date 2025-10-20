@@ -43,6 +43,7 @@ public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
             .requestMatchers(HttpMethod.GET, "/api/listings/**").permitAll()
 
             // Authenticated user 
+            .requestMatchers(HttpMethod.GET, "/api/listings/my-listings").authenticated()
             .requestMatchers(HttpMethod.POST, "/api/listings/**").authenticated()
             .requestMatchers(HttpMethod.PUT, "/api/listings/**").authenticated()
             .requestMatchers(HttpMethod.DELETE, "/api/listings/**").authenticated()
@@ -51,7 +52,7 @@ public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
             .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
             .anyRequest().authenticated()
-        )
+)
         .authenticationProvider(authenticationProvider())
         .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
