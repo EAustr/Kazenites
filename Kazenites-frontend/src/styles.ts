@@ -126,8 +126,22 @@ export const styles = StyleSheet.create({
   },
   cardRow: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  cardContent: {
+    flex: 1,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  cardImageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
   },
   cardTitle: {
     color: 'white',
