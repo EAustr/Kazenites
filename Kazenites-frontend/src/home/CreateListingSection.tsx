@@ -24,6 +24,9 @@ type Props = {
 };
 
 const unitOptions: ListingUnit[] = ['KG', 'G'];
+const alphaSpacePattern = /^[\p{L}]+(?:\s[\p{L}]+)*$/u;
+const cityPattern = alphaSpacePattern;
+const titlePattern = alphaSpacePattern;
 
 export default function CreateListingSection({
   isGuest,
@@ -126,37 +129,58 @@ export default function CreateListingSection({
 
   const priceValue = Number(createPrice);
 
-  if (!createTitle.trim()) {
-    setCreateError('Title is required.');
-    return;
-  }
+    if (!createTitle.trim()) {
+      setCreateError('Title is required.');
+      return;
+    }
+    if (!titlePattern.test(createTitle.trim())) {
+      setCreateError('Title may contain only letters and spaces.');
+      return;
+    }
 
   if (Number.isNaN(priceValue) || priceValue <= 0) {
     setCreateError('Enter a valid price.');
     return;
   }
 
-  const categoryValue = Number(createCategoryId);
-  if (!createCategoryId.trim() || Number.isNaN(categoryValue)) {
-    setCreateError('Provide a category ID (number).');
-    return;
-  }
+    if (!createCity.trim()) {
+      setCreateError('City is required.');
+      return;
+    }
+
+    if (!cityPattern.test(createCity.trim())) {
+      setCreateError('City may contain only letters and spaces.');
+      return;
+    }
+
+    const categoryValue = Number(createCategoryId);
+    if (!createCategoryId.trim() || Number.isNaN(categoryValue)) {
+      setCreateError('Provide a category ID (number).');
+      return;
+    }
 
   setCreateError(null);
   setCreateMessage(null);
   setCreateLoading(true);
 
-  try {
-    const payload: any = {
-      title: createTitle.trim(),
-      description: createDescription.trim() || undefined,
-      price: priceValue,
-      currency: 'EUR',
-      quantity: createQuantity ? Number(createQuantity) : undefined,
-      unit: createUnit,
-      city: createCity.trim() || undefined,
-      categoryId: categoryValue,
-    };
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/listings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: createTitle.trim(),
+          description: createDescription.trim() || undefined,
+          price: priceValue,
+          currency: 'EUR',
+          quantity: createQuantity ? Number(createQuantity) : undefined,
+          unit: createUnit,
+          city: createCity.trim(),
+          categoryId: categoryValue,
+        }),
+      });
 
     const url =
       mode === 'edit' && existingListing
@@ -264,8 +288,8 @@ export default function CreateListingSection({
               styles.categorySelect,
               pressed && styles.categorySelectPressed,
               !categories.length &&
-                !categoryFetchError &&
-                styles.categorySelectDisabled,
+              !categoryFetchError &&
+              styles.categorySelectDisabled,
             ]}
             disabled={!categories.length && !categoryFetchError}
             onPress={() => {
@@ -352,10 +376,13 @@ export default function CreateListingSection({
           </View>
         </Modal>
         <TextInput
-          placeholder="City (optional)"
+          placeholder="City"
           placeholderTextColor="#94a3b8"
           value={createCity}
-          onChangeText={setCreateCity}
+          onChangeText={text => {
+            setCreateCity(text);
+            setCreateError(null);
+          }}
           style={styles.createInput}
         />
         <TextInput
@@ -435,7 +462,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: '#f1f5f9',
   },
-  categoryPickerWrapper: {  
+  categoryPickerWrapper: {
     gap: 6,
   },
   categoryLabel: {

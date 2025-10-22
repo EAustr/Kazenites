@@ -13,7 +13,7 @@ export type Listing = {
   title: string;
   description?: string | null;
   price: number;
-  city?: string | null;
+  city: string;
   categoryId: number;
   status: ListingStatus;
   unit?: ListingUnit;
