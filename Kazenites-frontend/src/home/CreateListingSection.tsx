@@ -10,7 +10,7 @@ import {
   Pressable,
 } from 'react-native';
 import { API_BASE_URL } from '../config';
-import type { Category, ListingUnit } from '../types';
+import type { Category, Listing, ListingUnit } from '../types';
 import { AuthContext } from '../auth/AuthContext';
 import { Picker } from '@react-native-picker/picker';
 
@@ -19,6 +19,8 @@ type Props = {
   onLoginPress?: () => void;
   onRegisterPress?: () => void;
   onCreated?: () => void | Promise<void>;
+  existingListing?: Listing;
+  mode?: 'create' | 'edit';
 };
 
 const unitOptions: ListingUnit[] = ['KG', 'G'];
@@ -31,6 +33,8 @@ export default function CreateListingSection({
   onLoginPress,
   onRegisterPress,
   onCreated,
+  existingListing,
+  mode = 'create',
 }: Props) {
   const { token } = useContext(AuthContext);
   const [createTitle, setCreateTitle] = useState('');
@@ -49,6 +53,8 @@ export default function CreateListingSection({
   const [createError, setCreateError] = useState<string | null>(null);
   const [createLoading, setCreateLoading] = useState(false);
   const [pendingCategoryId, setPendingCategoryId] = useState('');
+
+  
 
   useEffect(() => {
     let isMounted = true;
@@ -84,6 +90,19 @@ export default function CreateListingSection({
     };
   }, []);
 
+  useEffect(() => {
+  if (mode === 'edit' && existingListing) {
+    setCreateTitle(existingListing.title ?? '');
+    setCreatePrice(existingListing.price ? String(existingListing.price) : '');
+    setCreateCategoryId(existingListing.categoryId ? String(existingListing.categoryId) : '');
+    setCreateDescription(existingListing.description ?? '');
+    setCreateCity(existingListing.city ?? '');
+    setCreateUnit(existingListing.unit ?? 'KG');
+    setCreateQuantity(existingListing.quantity ? String(existingListing.quantity) : '');
+  }
+}, [mode, existingListing]);
+
+
   const selectedCategoryName = useMemo(() => {
     if (!createCategoryId) {
       return null;
@@ -102,13 +121,13 @@ export default function CreateListingSection({
     setCreateQuantity('');
   };
 
-  const handleCreateListing = async () => {
-    if (isGuest || !token) {
-      setCreateError('You must be logged in to create a listing.');
-      return;
-    }
+  const handleSaveListing = async () => {
+  if (isGuest || !token) {
+    setCreateError('You must be logged in to create a listing.');
+    return;
+  }
 
-    const priceValue = Number(createPrice);
+  const priceValue = Number(createPrice);
 
     if (!createTitle.trim()) {
       setCreateError('Title is required.');
@@ -119,10 +138,10 @@ export default function CreateListingSection({
       return;
     }
 
-    if (Number.isNaN(priceValue) || priceValue <= 0) {
-      setCreateError('Enter a valid price.');
-      return;
-    }
+  if (Number.isNaN(priceValue) || priceValue <= 0) {
+    setCreateError('Enter a valid price.');
+    return;
+  }
 
     if (!createCity.trim()) {
       setCreateError('City is required.');
@@ -140,9 +159,9 @@ export default function CreateListingSection({
       return;
     }
 
-    setCreateError(null);
-    setCreateMessage(null);
-    setCreateLoading(true);
+  setCreateError(null);
+  setCreateMessage(null);
+  setCreateLoading(true);
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/listings`, {
@@ -163,20 +182,42 @@ export default function CreateListingSection({
         }),
       });
 
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `Create failed (${res.status})`);
-      }
+    const url =
+      mode === 'edit' && existingListing
+        ? `${API_BASE_URL}/api/listings/${existingListing.id}`
+        : `${API_BASE_URL}/api/listings`;
 
+    const method = mode === 'edit' && existingListing ? 'PUT' : 'POST';
+
+    const res = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Request failed (${res.status})`);
+    }
+
+    if (mode === 'edit') {
+      setCreateMessage('Listing updated! Pending review if it was rejected.');
+    } else {
       setCreateMessage('Listing submitted! Pending approval.');
       resetForm();
-      await onCreated?.();
-    } catch (e: any) {
-      setCreateError(e?.message ?? 'Failed to create listing');
-    } finally {
-      setCreateLoading(false);
     }
-  };
+
+    await onCreated?.();
+  } catch (e: any) {
+    setCreateError(e?.message ?? 'Failed to save listing');
+  } finally {
+    setCreateLoading(false);
+  }
+};
+
 
   if (isGuest) {
     return (
@@ -389,14 +430,18 @@ export default function CreateListingSection({
           <Text style={styles.createSuccess}>{createMessage}</Text>
         ) : null}
         <TouchableOpacity
-          style={[styles.createBtn, createLoading && { opacity: 0.6 }]}
-          onPress={handleCreateListing}
-          disabled={createLoading}
-        >
-          <Text style={styles.createBtnText}>
-            {createLoading ? 'Submitting…' : 'Create listing'}
-          </Text>
-        </TouchableOpacity>
+      style={[styles.createBtn, createLoading && { opacity: 0.6 }]}
+      onPress={handleSaveListing}
+      disabled={createLoading}
+>
+      <Text style={styles.createBtnText}>
+        {createLoading
+          ? (mode === 'edit' ? 'Saving…' : 'Submitting…')
+          : mode === 'edit'
+          ? 'Save changes'
+          : 'Create listing'}
+        </Text>
+      </TouchableOpacity>
       </View>
     </ScrollView>
   );
