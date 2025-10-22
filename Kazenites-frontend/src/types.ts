@@ -27,6 +27,7 @@ export type User = {
   email: string;
   name: string;
   surname: string;
-  role: string;
+  role: string; // 'USER' | 'ADMIN'
   city?: string;
+  avatarPath?: string | null;
 };

@@ -9,6 +9,7 @@ import {
 import { Listing } from '../types';
 import { styles } from '../styles';
 import type { User } from '../types';
+import { Colors } from '../theme/colors';
 
 type Props = {
   pendingListings: Listing[];
@@ -93,16 +94,16 @@ export default function AdminPanel({
               {/* Approve/Reject Buttons */}
               <View style={{ flexDirection: 'row', marginTop: 12 }}>
                 <TouchableOpacity
-                  style={[styles.linkBtn, { backgroundColor: 'green', marginRight: 8 }]}
+                  style={[styles.linkBtn, { backgroundColor: Colors.success, marginRight: 8 }]}
                   onPress={() => onApprove(item.id)}
                 >
-                  <Text style={{ color: 'white', fontWeight: '700' }}>Approve</Text>
+                  <Text style={{ color: Colors.text }}>Approve</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.linkBtn, { backgroundColor: 'red' }]}
+                  style={[styles.linkBtn, { backgroundColor: Colors.error }]}
                   onPress={() => onReject(item.id)}
                 >
-                  <Text style={{ color: 'white', fontWeight: '700' }}>Reject</Text>
+                  <Text style={{ color: Colors.text }}>Reject</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -145,7 +146,7 @@ export default function AdminPanel({
         style={[styles.linkBtn, { marginTop: 12, alignSelf: 'center' }]}
         onPress={onClose}
       >
-        <Text style={{ color: 'white' }}>Close</Text>
+        <Text style={{ color: Colors.text }}>Close</Text>
       </TouchableOpacity>
     </View>
   );

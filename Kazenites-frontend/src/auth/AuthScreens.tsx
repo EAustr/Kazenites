@@ -1,5 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
+import { Colors } from '../theme/colors';
 import { AuthContext } from './AuthContext';
 
 export function LoginScreen() {
@@ -35,6 +36,7 @@ export function LoginScreen() {
       <Text style={styles.title}>Login</Text>
       <TextInput
         placeholder="Email"
+        placeholderTextColor={Colors.placeholder}
         autoCapitalize="none"
         value={email}
         onChangeText={setEmail}
@@ -42,6 +44,7 @@ export function LoginScreen() {
       />
       <TextInput
         placeholder="Password"
+        placeholderTextColor={Colors.placeholder}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
@@ -97,24 +100,28 @@ export function RegisterScreen() {
       <Text style={styles.title}>Register</Text>
       <TextInput
         placeholder="Name"
+        placeholderTextColor={Colors.placeholder}
         value={name}
         onChangeText={setName}
         style={styles.input}
       />
       <TextInput
         placeholder="Surname"
+        placeholderTextColor={Colors.placeholder}
         value={surname}
         onChangeText={setSurname}
         style={styles.input}
       />
       <TextInput
         placeholder="City (optional)"
+        placeholderTextColor={Colors.placeholder}
         value={city}
         onChangeText={setCity}
         style={styles.input}
       />
       <TextInput
         placeholder="Email"
+        placeholderTextColor={Colors.placeholder}
         autoCapitalize="none"
         value={email}
         onChangeText={setEmail}
@@ -122,6 +129,7 @@ export function RegisterScreen() {
       />
       <TextInput
         placeholder="Password"
+        placeholderTextColor={Colors.placeholder}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
@@ -143,22 +151,22 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 12,
     justifyContent: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: Colors.background,
   },
   title: {
     fontSize: 24,
     fontWeight: '600',
     marginBottom: 8,
     textAlign: 'center',
-    color: '#0f172a',
+    color: Colors.text,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: Colors.border,
     borderRadius: 8,
     padding: 12,
-    backgroundColor: '#ffffff',
-    color: '#0f172a',
+    backgroundColor: Colors.surface,
+    color: Colors.text,
   },
-  error: { color: '#b91c1c' },
+  error: { color: Colors.error },
 });

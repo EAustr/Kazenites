@@ -33,6 +33,11 @@ public class User {
 
     private String city;
 
+    // Relative path under /uploads/** served by WebConfig, e.g.
+    // /uploads/avatars/{userId}/avatar.jpg
+    @Column(name = "avatar_path")
+    private String avatarPath;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role = Role.USER;
@@ -93,6 +98,14 @@ public class User {
 
     public void setCity(String city) {
         this.city = city;
+    }
+
+    public String getAvatarPath() {
+        return avatarPath;
+    }
+
+    public void setAvatarPath(String avatarPath) {
+        this.avatarPath = avatarPath;
     }
 
     public Role getRole() {
