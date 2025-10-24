@@ -165,39 +165,32 @@ export default function CreateListingSection({
   setCreateLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/listings`, {
-        method: 'POST',
+      const payload = {
+        title: createTitle.trim(),
+        description: createDescription.trim() || undefined,
+        price: priceValue,
+        currency: 'EUR',
+        quantity: createQuantity ? Number(createQuantity) : undefined,
+        unit: createUnit,
+        city: createCity.trim(),
+        categoryId: categoryValue,
+      };
+
+      const url =
+        mode === 'edit' && existingListing
+          ? `${API_BASE_URL}/api/listings/${existingListing.id}`
+          : `${API_BASE_URL}/api/listings`;
+
+      const method = mode === 'edit' && existingListing ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          title: createTitle.trim(),
-          description: createDescription.trim() || undefined,
-          price: priceValue,
-          currency: 'EUR',
-          quantity: createQuantity ? Number(createQuantity) : undefined,
-          unit: createUnit,
-          city: createCity.trim(),
-          categoryId: categoryValue,
-        }),
+        body: JSON.stringify(payload),
       });
-
-    const url =
-      mode === 'edit' && existingListing
-        ? `${API_BASE_URL}/api/listings/${existingListing.id}`
-        : `${API_BASE_URL}/api/listings`;
-
-    const method = mode === 'edit' && existingListing ? 'PUT' : 'POST';
-
-    const res = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
 
     if (!res.ok) {
       const text = await res.text();
@@ -453,7 +446,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   unitLabel: {
-    color: '#0f172a',
+    color: Colors.text,
     fontWeight: '600',
     marginBottom: 4,
   },
@@ -524,7 +517,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: Colors.border,
   },
   categoryToolbarText: {
     color: Colors.primary,
@@ -534,7 +527,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   categoryToolbarTitle: {
-    color: '#0f172a',
+    color: Colors.text,
     fontSize: 16,
     fontWeight: '600',
   },
