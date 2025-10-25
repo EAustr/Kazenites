@@ -150,11 +150,6 @@ public class ListingController {
         repo.deleteById(id);
     }
 
-    @GetMapping("/my-listings")
-    public List<Listing> getMyListings(@AuthenticationPrincipal UserPrincipal principal) {
-        return repo.findByOwnerIdOrderByCreatedAtDesc(principal.getUser().getId());
-    }
-
     @GetMapping("/{id}/images")
     public List<ListingImage> getListingImages(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
         // Verify listing exists and user has permission to view it

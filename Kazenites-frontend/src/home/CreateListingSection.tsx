@@ -16,6 +16,7 @@ import {
   launchCamera,
   ImagePickerResponse,
   MediaType,
+  PhotoQuality,
 } from 'react-native-image-picker';
 import { API_BASE_URL } from '../config';
 import { Colors } from '../theme/colors';
@@ -149,7 +150,7 @@ export default function CreateListingSection({
     console.log('Opening camera...');
     const options = {
       mediaType: 'photo' as MediaType,
-      quality: 0.8,
+      quality: 0.5 as PhotoQuality,
       includeBase64: true,
     };
 
@@ -182,7 +183,7 @@ export default function CreateListingSection({
     console.log('Opening gallery...');
     const options = {
       mediaType: 'photo' as MediaType,
-      quality: 0.8,
+      quality: 0.5 as PhotoQuality,
       includeBase64: true,
     };
 
@@ -367,14 +368,7 @@ export default function CreateListingSection({
     } finally {
       setCreateLoading(false);
     }
-
-    await onCreated?.();
-  } catch (e: any) {
-    setCreateError(e?.message ?? 'Failed to save listing');
-  } finally {
-    setCreateLoading(false);
-  }
-};
+  };
 
 
   if (isGuest) {
