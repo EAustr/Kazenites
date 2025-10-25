@@ -120,7 +120,7 @@ export default function CreateListingSection({
     console.log('Opening camera...');
     const options = {
       mediaType: 'photo' as MediaType,
-      quality: 0.8 as any,
+      quality: 0.8,
       includeBase64: true,
     };
 
