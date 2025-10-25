@@ -170,7 +170,7 @@ public class ListingController {
         if (!isOwner && !isAdmin) throw new ListingForbiddenException();
 
         // Verify image exists and belongs to this listing
-        ListingImage image = imageRepo.findById(imageId).orElseThrow(() -> new RuntimeException("Image not found"));
+        ListingImage image = imageRepo.findById(imageId).orElseThrow(() -> new ImageNotFoundException(imageId));
         if (!image.getListingId().equals(listingId)) {
             throw new ListingForbiddenException();
         }

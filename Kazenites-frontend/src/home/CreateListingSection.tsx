@@ -11,7 +11,12 @@ import {
   Image,
   Alert,
 } from 'react-native';
-import {launchImageLibrary, launchCamera, ImagePickerResponse, MediaType} from 'react-native-image-picker';
+import {
+  launchImageLibrary,
+  launchCamera,
+  ImagePickerResponse,
+  MediaType,
+} from 'react-native-image-picker';
 import { API_BASE_URL } from '../config';
 import type { Category, ListingUnit } from '../types';
 import { AuthContext } from '../auth/AuthContext';
@@ -52,7 +57,9 @@ export default function CreateListingSection({
   const [createError, setCreateError] = useState<string | null>(null);
   const [createLoading, setCreateLoading] = useState(false);
   const [pendingCategoryId, setPendingCategoryId] = useState('');
-  const [selectedImages, setSelectedImages] = useState<{uri: string; base64?: string}[]>([]);
+  const [selectedImages, setSelectedImages] = useState<
+    { uri: string; base64?: string }[]
+  >([]);
   const [imageError, setImageError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -99,21 +106,23 @@ export default function CreateListingSection({
 
   const selectImage = () => {
     console.log('selectImage called');
-    Alert.alert(
-      'Select Image',
-      'Choose an option',
-      [
-        { text: 'Camera', onPress: () => {
+    Alert.alert('Select Image', 'Choose an option', [
+      {
+        text: 'Camera',
+        onPress: () => {
           console.log('Camera button pressed');
           openCamera();
-        }},
-        { text: 'Gallery', onPress: () => {
+        },
+      },
+      {
+        text: 'Gallery',
+        onPress: () => {
           console.log('Gallery button pressed');
           openGallery();
-        }},
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const openCamera = () => {
@@ -138,10 +147,13 @@ export default function CreateListingSection({
       if (response.assets && response.assets[0]) {
         const asset = response.assets[0];
         console.log('Adding image from camera:', asset.uri);
-        setSelectedImages([...selectedImages, {
-          uri: asset.uri!,
-          base64: asset.base64,
-        }]);
+        setSelectedImages([
+          ...selectedImages,
+          {
+            uri: asset.uri!,
+            base64: asset.base64,
+          },
+        ]);
       }
     });
   };
@@ -150,7 +162,7 @@ export default function CreateListingSection({
     console.log('Opening gallery...');
     const options = {
       mediaType: 'photo' as MediaType,
-      quality: 0.8 as any,
+      quality: 0.8,
       includeBase64: true,
     };
 
@@ -168,10 +180,13 @@ export default function CreateListingSection({
       if (response.assets && response.assets[0]) {
         const asset = response.assets[0];
         console.log('Adding image from gallery:', asset.uri);
-        setSelectedImages([...selectedImages, {
-          uri: asset.uri!,
-          base64: asset.base64,
-        }]);
+        setSelectedImages([
+          ...selectedImages,
+          {
+            uri: asset.uri!,
+            base64: asset.base64,
+          },
+        ]);
       }
     });
   };
@@ -260,33 +275,46 @@ export default function CreateListingSection({
       }
 
       const createdListing = await res.json();
-      
+
       // Add images if provided
       if (selectedImages.length > 0) {
         try {
           for (let i = 0; i < selectedImages.length; i++) {
             const image = selectedImages[i];
-            console.log(`Uploading image ${i + 1} for listing ${createdListing.id}`);
-            
-            const imagePath = image.base64 ? `data:image/jpeg;base64,${image.base64}` : image.uri;
+            console.log(
+              `Uploading image ${i + 1} for listing ${createdListing.id}`,
+            );
+
+            const imagePath = image.base64
+              ? `data:image/jpeg;base64,${image.base64}`
+              : image.uri;
             console.log(`Image path length: ${imagePath.length}`);
-            
-            const response = await fetch(`${API_BASE_URL}/api/listings/${createdListing.id}/images`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
+
+            const response = await fetch(
+              `${API_BASE_URL}/api/listings/${createdListing.id}/images`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  path: imagePath,
+                  sortOrder: i + 1,
+                }),
               },
-              body: JSON.stringify({
-                path: imagePath,
-                sortOrder: i + 1,
-              }),
-            });
-            
+            );
+
             if (!response.ok) {
               const errorText = await response.text();
-              console.error(`Failed to upload image ${i + 1}:`, response.status, errorText);
-              throw new Error(`Failed to upload image ${i + 1}: ${response.status}`);
+              console.error(
+                `Failed to upload image ${i + 1}:`,
+                response.status,
+                errorText,
+              );
+              throw new Error(
+                `Failed to upload image ${i + 1}: ${response.status}`,
+              );
             } else {
               console.log(`Successfully uploaded image ${i + 1}`);
             }
@@ -299,12 +327,12 @@ export default function CreateListingSection({
 
       setCreateMessage('Listing submitted! Pending approval.');
       resetForm();
-      
-      // Small delay to ensure backend processing is complete
-      setTimeout(async () => {
-        // Call onCreated callback after everything is done, including image uploads
-        await onCreated?.();
-      }, 500);
+
+      // Call onCreated callback after everything is done, including image uploads
+      // Backend operations are already complete at this point since we awaited all fetch calls
+      if (onCreated) {
+        await onCreated();
+      }
     } catch (e: any) {
       setCreateError(e?.message ?? 'Failed to create listing');
     } finally {
@@ -381,8 +409,8 @@ export default function CreateListingSection({
               styles.categorySelect,
               pressed && styles.categorySelectPressed,
               !categories.length &&
-              !categoryFetchError &&
-              styles.categorySelectDisabled,
+                !categoryFetchError &&
+                styles.categorySelectDisabled,
             ]}
             disabled={!categories.length && !categoryFetchError}
             onPress={() => {
@@ -520,30 +548,30 @@ export default function CreateListingSection({
         {/* Images Section */}
         <View style={styles.imageSection}>
           <Text style={styles.imageSectionTitle}>Images (optional)</Text>
-          
+
           {/* Display selected images */}
           {selectedImages.length > 0 && (
             <ScrollView horizontal style={styles.imagePreviewContainer}>
               {selectedImages.map((image, index) => (
                 <View key={index} style={styles.imagePreviewItem}>
-                  <Image source={{ uri: image.uri }} style={styles.imagePreview} />
+                  <Image
+                    source={{ uri: image.uri }}
+                    style={styles.imagePreview}
+                  />
                   <TouchableOpacity
-                    style={[styles.removeImageBtn, { position: 'absolute', top: -5, right: -5, width: 20, height: 20, borderRadius: 10 }]}
+                    style={styles.removeImagePreviewBtn}
                     onPress={() => removeImage(index)}
                   >
-                    <Text style={[styles.removeImageBtnText, { fontSize: 12 }]}>×</Text>
+                    <Text style={styles.removeImagePreviewBtnText}>×</Text>
                   </TouchableOpacity>
                 </View>
               ))}
             </ScrollView>
           )}
-          
+
           {/* Add image button */}
           {selectedImages.length < 5 && (
-            <TouchableOpacity
-              style={styles.addImageBtn}
-              onPress={selectImage}
-            >
+            <TouchableOpacity style={styles.addImageBtn} onPress={selectImage}>
               <Text style={styles.addImageBtnText}>📷 Add Image</Text>
             </TouchableOpacity>
           )}
@@ -811,6 +839,22 @@ const styles = StyleSheet.create({
   removeImageBtnText: {
     color: 'white',
     fontSize: 18,
+    fontWeight: 'bold',
+  },
+  removeImagePreviewBtn: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    width: 20,
+    height: 20,
+    backgroundColor: '#ef4444',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeImagePreviewBtnText: {
+    color: 'white',
+    fontSize: 12,
     fontWeight: 'bold',
   },
   addImageBtn: {

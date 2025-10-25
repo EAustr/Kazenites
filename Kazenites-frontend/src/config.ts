@@ -7,5 +7,5 @@ export const API_BASE_URL = (() => {
   
   if (Platform.OS === 'android') return 'http://10.0.2.2:8080';
   // Change this to your computer's actual IP address to test on physical devices
-  return 'http://172.20.10.2:8080';
+  return 'http://localhost:8080';
 })();
