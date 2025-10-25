@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.kazenites.listing.dto.ListingCreateRequest;
 import com.kazenites.listing.dto.ListingUpdateRequest;
@@ -54,6 +55,15 @@ public class ListingController {
             return repo.findByStatusAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(ListingStatus.APPROVED, term);
         }
         return repo.findByStatusOrderByCreatedAtDesc(ListingStatus.APPROVED);
+    }
+
+    @GetMapping("/my-listings")
+    public List<Listing> getMyListings(@AuthenticationPrincipal UserPrincipal principal) {
+    if (principal == null) {
+        throw new ListingForbiddenException();
+    }
+    Long ownerId = principal.getUser().getId();
+    return repo.findByOwnerIdOrderByCreatedAtDesc(ownerId);
     }
 
     @GetMapping("/{id}")
@@ -107,6 +117,27 @@ public class ListingController {
         if (req.categoryId != null) l.setCategoryId(req.categoryId);
 
         return repo.save(l);
+    }
+
+    @PutMapping("/{id}/republish")
+    public Listing republish(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+    Listing l = repo.findById(id).orElseThrow(() -> new ListingNotFoundException(id));
+
+    if (principal == null) {
+        throw new ListingForbiddenException();
+    }
+
+    boolean isOwner = l.getOwnerId().equals(principal.getUser().getId());
+    if (!isOwner) {
+        throw new ListingForbiddenException();
+    }
+
+    if (l.getStatus() != ListingStatus.REJECTED) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only rejected listings can be republished.");
+    }
+
+    l.setStatus(ListingStatus.PENDING);
+    return repo.save(l);
     }
 
     @DeleteMapping("/{id}")

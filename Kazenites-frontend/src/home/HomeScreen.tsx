@@ -18,6 +18,7 @@ import GuestNotice from '../home/Guest';
 import AdminPanel from '../admin/AdminPanel';
 import ListingImage from '../components/ListingImage';
 import { styles } from '../styles';
+import { Colors } from '../theme/colors';
 
 type Props = {
   isGuest: boolean;
@@ -25,6 +26,7 @@ type Props = {
   onRegisterPress?: () => void;
   onLogoutPress?: () => void;
   onProfilePress?: () => void;
+  onActiveListingsPress?: () => void;
 };
 
 export default function HomeScreen({
@@ -33,6 +35,7 @@ export default function HomeScreen({
   onRegisterPress,
   onLogoutPress,
   onProfilePress,
+  onActiveListingsPress,
 }: Props) {
   const { token, user } = useContext(AuthContext);
 
@@ -95,8 +98,13 @@ export default function HomeScreen({
       const res = await fetch(`${API_BASE_URL}/api/admin/listings`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok)
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          // Not authorized (likely non-admin or expired token); don't spam console with errors
+          return;
+        }
         throw new Error(`Failed to fetch pending listings (${res.status})`);
+      }
       const json = await res.json();
       setPendingListings(json);
     } catch (e: any) {
@@ -216,7 +224,7 @@ export default function HomeScreen({
           <Text
             style={[
               styles.pill,
-              isPending && { backgroundColor: '#fbbf24', color: '#000' },
+              isPending && { backgroundColor: Colors.warning, color: '#000' },
             ]}
           >
             {item.status}
@@ -237,6 +245,7 @@ export default function HomeScreen({
         onLogoutPress={onLogoutPress}
         onAdminPress={() => setShowAdmin(true)}
         onProfilePress={onProfilePress}
+        onActiveListingsPress={onActiveListingsPress}
       />
 
       <View style={styles.tabBarWrapper}>
@@ -281,7 +290,7 @@ export default function HomeScreen({
           <View style={styles.searchRow}>
             <TextInput
               placeholder="Search listings..."
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor={Colors.textMuted}
               value={q}
               onChangeText={setQ}
               style={styles.searchInput}

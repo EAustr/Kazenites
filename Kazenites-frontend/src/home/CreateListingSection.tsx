@@ -18,7 +18,8 @@ import {
   MediaType,
 } from 'react-native-image-picker';
 import { API_BASE_URL } from '../config';
-import type { Category, ListingUnit } from '../types';
+import { Colors } from '../theme/colors';
+import type { Category, Listing, ListingUnit } from '../types';
 import { AuthContext } from '../auth/AuthContext';
 import { Picker } from '@react-native-picker/picker';
 
@@ -27,6 +28,8 @@ type Props = {
   onLoginPress?: () => void;
   onRegisterPress?: () => void;
   onCreated?: () => void | Promise<void>;
+  existingListing?: Listing;
+  mode?: 'create' | 'edit';
 };
 
 const unitOptions: ListingUnit[] = ['KG', 'G'];
@@ -39,6 +42,8 @@ export default function CreateListingSection({
   onLoginPress,
   onRegisterPress,
   onCreated,
+  existingListing,
+  mode = 'create',
 }: Props) {
   const { token } = useContext(AuthContext);
   const [createTitle, setCreateTitle] = useState('');
@@ -61,6 +66,8 @@ export default function CreateListingSection({
     { uri: string; base64?: string }[]
   >([]);
   const [imageError, setImageError] = useState<string | null>(null);
+
+  
 
   useEffect(() => {
     let isMounted = true;
@@ -95,6 +102,19 @@ export default function CreateListingSection({
       controller.abort();
     };
   }, []);
+
+  useEffect(() => {
+  if (mode === 'edit' && existingListing) {
+    setCreateTitle(existingListing.title ?? '');
+    setCreatePrice(existingListing.price ? String(existingListing.price) : '');
+    setCreateCategoryId(existingListing.categoryId ? String(existingListing.categoryId) : '');
+    setCreateDescription(existingListing.description ?? '');
+    setCreateCity(existingListing.city ?? '');
+    setCreateUnit(existingListing.unit ?? 'KG');
+    setCreateQuantity(existingListing.quantity ? String(existingListing.quantity) : '');
+  }
+}, [mode, existingListing]);
+
 
   const selectedCategoryName = useMemo(() => {
     if (!createCategoryId) {
@@ -208,13 +228,13 @@ export default function CreateListingSection({
     setImageError(null);
   };
 
-  const handleCreateListing = async () => {
-    if (isGuest || !token) {
-      setCreateError('You must be logged in to create a listing.');
-      return;
-    }
+  const handleSaveListing = async () => {
+  if (isGuest || !token) {
+    setCreateError('You must be logged in to create a listing.');
+    return;
+  }
 
-    const priceValue = Number(createPrice);
+  const priceValue = Number(createPrice);
 
     if (!createTitle.trim()) {
       setCreateError('Title is required.');
@@ -225,10 +245,10 @@ export default function CreateListingSection({
       return;
     }
 
-    if (Number.isNaN(priceValue) || priceValue <= 0) {
-      setCreateError('Enter a valid price.');
-      return;
-    }
+  if (Number.isNaN(priceValue) || priceValue <= 0) {
+    setCreateError('Enter a valid price.');
+    return;
+  }
 
     if (!createCity.trim()) {
       setCreateError('City is required.');
@@ -246,33 +266,42 @@ export default function CreateListingSection({
       return;
     }
 
-    setCreateError(null);
-    setCreateMessage(null);
-    setCreateLoading(true);
+  setCreateError(null);
+  setCreateMessage(null);
+  setCreateLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/listings`, {
-        method: 'POST',
+      const payload = {
+        title: createTitle.trim(),
+        description: createDescription.trim() || undefined,
+        price: priceValue,
+        currency: 'EUR',
+        quantity: createQuantity ? Number(createQuantity) : undefined,
+        unit: createUnit,
+        city: createCity.trim(),
+        categoryId: categoryValue,
+      };
+
+      const url =
+        mode === 'edit' && existingListing
+          ? `${API_BASE_URL}/api/listings/${existingListing.id}`
+          : `${API_BASE_URL}/api/listings`;
+
+      const method = mode === 'edit' && existingListing ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          title: createTitle.trim(),
-          description: createDescription.trim() || undefined,
-          price: priceValue,
-          currency: 'EUR',
-          quantity: createQuantity ? Number(createQuantity) : undefined,
-          unit: createUnit,
-          city: createCity.trim(),
-          categoryId: categoryValue,
-        }),
+        body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `Create failed (${res.status})`);
-      }
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Request failed (${res.status})`);
+    }
 
       const createdListing = await res.json();
 
@@ -338,7 +367,15 @@ export default function CreateListingSection({
     } finally {
       setCreateLoading(false);
     }
-  };
+
+    await onCreated?.();
+  } catch (e: any) {
+    setCreateError(e?.message ?? 'Failed to save listing');
+  } finally {
+    setCreateLoading(false);
+  }
+};
+
 
   if (isGuest) {
     return (
@@ -384,7 +421,7 @@ export default function CreateListingSection({
         <Text style={styles.createTitle}>Create a test listing</Text>
         <TextInput
           placeholder="Title"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={Colors.placeholder}
           value={createTitle}
           onChangeText={text => {
             setCreateTitle(text);
@@ -394,7 +431,7 @@ export default function CreateListingSection({
         />
         <TextInput
           placeholder="Price (EUR)"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={Colors.placeholder}
           keyboardType="decimal-pad"
           value={createPrice}
           onChangeText={text => {
@@ -497,8 +534,8 @@ export default function CreateListingSection({
           </View>
         </Modal>
         <TextInput
-          placeholder="City"
-          placeholderTextColor="#94a3b8"
+          placeholder="City (optional)"
+          placeholderTextColor={Colors.placeholder}
           value={createCity}
           onChangeText={text => {
             setCreateCity(text);
@@ -508,7 +545,7 @@ export default function CreateListingSection({
         />
         <TextInput
           placeholder="Quantity (optional)"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={Colors.placeholder}
           keyboardType="decimal-pad"
           value={createQuantity}
           onChangeText={setCreateQuantity}
@@ -537,7 +574,7 @@ export default function CreateListingSection({
         </View>
         <TextInput
           placeholder="Description (optional)"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={Colors.placeholder}
           multiline
           numberOfLines={3}
           value={createDescription}
@@ -587,14 +624,18 @@ export default function CreateListingSection({
           <Text style={styles.createSuccess}>{createMessage}</Text>
         ) : null}
         <TouchableOpacity
-          style={[styles.createBtn, createLoading && { opacity: 0.6 }]}
-          onPress={handleCreateListing}
-          disabled={createLoading}
-        >
-          <Text style={styles.createBtnText}>
-            {createLoading ? 'Submitting…' : 'Create listing'}
-          </Text>
-        </TouchableOpacity>
+      style={[styles.createBtn, createLoading && { opacity: 0.6 }]}
+      onPress={handleSaveListing}
+      disabled={createLoading}
+>
+      <Text style={styles.createBtnText}>
+        {createLoading
+          ? (mode === 'edit' ? 'Saving…' : 'Submitting…')
+          : mode === 'edit'
+          ? 'Save changes'
+          : 'Create listing'}
+        </Text>
+      </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -605,21 +646,21 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   unitLabel: {
-    color: '#0f172a',
+    color: Colors.text,
     fontWeight: '600',
     marginBottom: 4,
   },
   unitPicker: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: Colors.border,
     borderRadius: 10,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: Colors.surfaceMuted,
   },
   categoryPickerWrapper: {
     gap: 6,
   },
   categoryLabel: {
-    color: '#0f172a',
+    color: Colors.text,
     fontWeight: '600',
   },
   categorySelect: {
@@ -629,33 +670,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: Colors.border,
     borderRadius: 10,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: Colors.surfaceMuted,
   },
   categorySelectPressed: {
-    backgroundColor: '#e2e8f0',
+    backgroundColor: Colors.surfaceAlt,
   },
   categorySelectDisabled: {
     opacity: 0.6,
   },
   categorySelectedText: {
-    color: '#0f172a',
+    color: Colors.text,
     fontWeight: '600',
     flex: 1,
     marginRight: 8,
   },
   categoryPlaceholderText: {
-    color: '#94a3b8',
+    color: Colors.textMuted,
     flex: 1,
     marginRight: 8,
   },
   categoryChevron: {
-    color: '#475569',
+    color: Colors.textSubtle,
     fontSize: 16,
   },
   categoryError: {
-    color: '#b91c1c',
+    color: Colors.error,
     fontSize: 12,
   },
   categoryModalOverlay: {
@@ -663,7 +704,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   categoryPickerSheet: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
@@ -676,46 +717,46 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: Colors.border,
   },
   categoryToolbarText: {
-    color: '#2563eb',
+    color: Colors.primary,
     fontWeight: '600',
   },
   categoryToolbarConfirm: {
     fontWeight: '700',
   },
   categoryToolbarTitle: {
-    color: '#0f172a',
+    color: Colors.text,
     fontSize: 16,
     fontWeight: '600',
   },
-  createScroll: { flex: 1, backgroundColor: '#f8fafc' },
+  createScroll: { flex: 1, backgroundColor: Colors.background },
   createScrollContent: { paddingBottom: 32 },
   createBox: {
     marginTop: 20,
     marginHorizontal: 16,
     marginBottom: 12,
     padding: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: Colors.border,
     gap: 10,
   },
   createTitle: {
-    color: '#0f172a',
+    color: Colors.text,
     fontWeight: '700',
     fontSize: 16,
   },
   createInput: {
-    backgroundColor: '#f1f5f9',
-    color: '#0f172a',
+    backgroundColor: Colors.surfaceMuted,
+    color: Colors.text,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: Colors.border,
   },
   unitRow: {
     flexDirection: 'row',
@@ -725,43 +766,43 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: Colors.surfaceMuted,
     borderWidth: 1,
-    borderColor: '#cbd5f5',
+    borderColor: Colors.border,
   },
   unitChipActive: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   unitChipText: {
-    color: '#475569',
+    color: Colors.textSubtle,
     fontWeight: '600',
     letterSpacing: 0.5,
   },
   unitChipTextActive: {
-    color: 'white',
+    color: Colors.text,
   },
   createTextarea: {
     minHeight: 80,
     textAlignVertical: 'top',
   },
   createBtn: {
-    backgroundColor: '#2563eb',
+    backgroundColor: Colors.primary,
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
   },
   createBtnText: {
-    color: 'white',
+    color: Colors.text,
     fontWeight: '700',
     fontSize: 15,
   },
   createError: {
-    color: '#b91c1c',
+    color: Colors.error,
     fontSize: 13,
   },
   createSuccess: {
-    color: '#047857',
+    color: Colors.success,
     fontSize: 13,
   },
   guestNotice: {
@@ -769,19 +810,19 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 12,
     padding: 20,
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: Colors.border,
     gap: 12,
   },
   guestNoticeTitle: {
-    color: '#0f172a',
+    color: Colors.text,
     fontSize: 18,
     fontWeight: '700',
   },
   guestNoticeText: {
-    color: '#475569',
+    color: Colors.textSubtle,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -795,16 +836,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#cbd5f5',
-    backgroundColor: '#f1f5f9',
+    borderColor: Colors.border,
+    backgroundColor: Colors.surfaceMuted,
   },
   secondaryBtnText: {
-    color: '#1e293b',
+    color: Colors.textSubtle,
     fontWeight: '600',
   },
   secondaryBtnPrimary: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   secondaryBtnPrimaryText: {
     color: 'white',

@@ -16,6 +16,7 @@ import {
   Platform,
   TouchableOpacity,
 } from 'react-native';
+import { Colors } from './src/theme/colors';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AuthProvider, AuthContext } from './src/auth/AuthContext';
 import { LoginScreen, RegisterScreen } from './src/auth/AuthScreens';
@@ -26,9 +27,9 @@ function App() {
   return (
     <SafeAreaProvider>
       <StatusBar
-        barStyle="dark-content"
+        barStyle="light-content"
         translucent={false}
-        backgroundColor="#f8fafc"
+        backgroundColor={Colors.background}
       />
       <AuthProvider>
         <RootNavigator />
@@ -41,36 +42,37 @@ function RootNavigator() {
   const { user, logout } = useContext(AuthContext);
   const [authView, setAuthView] = useState<null | 'login' | 'register'>(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [profileInitialTab, setProfileInitialTab] = useState<'profile' | 'listings'>('profile');
 
   if (!user) {
     if (authView === 'login' || authView === 'register') {
       return (
         <SafeAreaView
           edges={['top']}
-          style={{ flex: 1, backgroundColor: '#f8fafc' }}
+          style={{ flex: 1, backgroundColor: Colors.background }}
         >
           <View
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: Colors.surface,
               paddingHorizontal: 16,
               paddingVertical: 12,
               flexDirection: 'row',
               alignItems: 'center',
               borderBottomWidth: 1,
-              borderBottomColor: '#e2e8f0',
+              borderBottomColor: Colors.border,
             }}
           >
             <TouchableOpacity
               onPress={() => setAuthView(null)}
               style={{ paddingVertical: 6, paddingRight: 12 }}
             >
-              <Text style={{ color: '#2563eb', fontWeight: '600' }}>Back</Text>
+              <Text style={{ color: Colors.primary, fontWeight: '600' }}>Back</Text>
             </TouchableOpacity>
-            <Text style={{ color: '#0f172a', fontSize: 18, fontWeight: '700' }}>
+            <Text style={{ color: Colors.text, fontSize: 18, fontWeight: '700' }}>
               {authView === 'login' ? 'Login' : 'Register'}
             </Text>
           </View>
-          <View style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+          <View style={{ flex: 1, backgroundColor: Colors.background }}>
             {authView === 'login' ? <LoginScreen /> : <RegisterScreen />}
           </View>
         </SafeAreaView>
@@ -87,14 +89,26 @@ function RootNavigator() {
 
   // Show profile page if requested
   if (showProfile) {
-    return <ProfilePage onBack={() => setShowProfile(false)} />;
+    return (
+      <ProfilePage
+        onBack={() => setShowProfile(false)}
+        initialTab={profileInitialTab}
+      />
+    );
   }
 
   return (
     <HomeScreen
       isGuest={false}
       onLogoutPress={logout}
-      onProfilePress={() => setShowProfile(true)}
+      onProfilePress={() => {
+        setProfileInitialTab('profile');
+        setShowProfile(true);
+      }}
+      onActiveListingsPress={() => {
+        setProfileInitialTab('listings');
+        setShowProfile(true);
+      }}
     />
   );
 }
@@ -168,33 +182,33 @@ const styles = StyleSheet.create({
     gap: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: Colors.background,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
     textAlign: 'center',
-    color: '#0f172a',
+    color: Colors.text,
   },
-  subtitle: { fontSize: 16, textAlign: 'center', color: '#475569' },
+  subtitle: { fontSize: 16, textAlign: 'center', color: Colors.textSubtle },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   block: {
     padding: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderRadius: 8,
     width: '90%',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: Colors.border,
   },
   noteBlock: { paddingTop: 12 },
-  note: { fontSize: 12, textAlign: 'center', color: '#64748b' },
-  info: { marginLeft: 8, textAlign: 'center', color: '#475569' },
+  note: { fontSize: 12, textAlign: 'center', color: Colors.textMuted },
+  info: { marginLeft: 8, textAlign: 'center', color: Colors.textSubtle },
   code: {
     fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace' }),
     fontSize: 12,
     textAlign: 'center',
   },
-  error: { color: '#b91c1c', textAlign: 'center' },
+  error: { color: Colors.error, textAlign: 'center' },
 });
 
 export default App;
