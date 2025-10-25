@@ -9,6 +9,7 @@ import {
 import { Listing } from '../types';
 import { styles } from '../styles';
 import type { User } from '../types';
+import { Colors } from '../theme/colors';
 
 type Props = {
   pendingListings: Listing[];
@@ -62,29 +63,54 @@ export default function AdminPanel({
       </View>
 
       {/* Listings Tab */}
-      {adminTab === 'listings' && (
+       {adminTab === 'listings' && (
         <FlatList
           data={pendingListings}
           keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>{item.title}</Text>
-              <View style={{ flexDirection: 'row', marginTop: 8 }}>
+
+              {item.description ? (
+                <Text style={styles.cardDesc}>{item.description}</Text>
+              ) : null}
+
+              <View style={{ marginTop: 6 }}>
+                <Text style={styles.cardMeta}>
+                   Price: {item.price} / {item.unit || 'unit'}
+                </Text>
+                {item.quantity ? (
+                  <Text style={styles.cardMeta}> Quantity: {item.quantity}</Text>
+                ) : null}
+                {item.city ? (
+                  <Text style={styles.cardMeta}> City: {item.city}</Text>
+                ) : null}
+                <Text style={styles.cardMeta}> Category ID: {item.categoryId}</Text>
+                <Text style={styles.cardMeta}>
+                 Created: {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Unknown'}
+                </Text>
+              </View>
+
+              {/* Approve/Reject Buttons */}
+              <View style={{ flexDirection: 'row', marginTop: 12 }}>
                 <TouchableOpacity
-                  style={[styles.linkBtn, { backgroundColor: 'green', marginRight: 8 }]}
+                  style={[styles.linkBtn, { backgroundColor: Colors.success, marginRight: 8 }]}
                   onPress={() => onApprove(item.id)}
                 >
-                  <Text style={{ color: 'white' }}>Approve</Text>
+                  <Text style={{ color: Colors.text }}>Approve</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.linkBtn, { backgroundColor: 'red' }]}
+                  style={[styles.linkBtn, { backgroundColor: Colors.error }]}
                   onPress={() => onReject(item.id)}
                 >
-                  <Text style={{ color: 'white' }}>Reject</Text>
+                  <Text style={{ color: Colors.text }}>Reject</Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
+          ListEmptyComponent={
+            <Text style={styles.cardMeta}>No pending listings</Text>
+          }
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         />
       )}
@@ -120,7 +146,7 @@ export default function AdminPanel({
         style={[styles.linkBtn, { marginTop: 12, alignSelf: 'center' }]}
         onPress={onClose}
       >
-        <Text style={{ color: 'white' }}>Close</Text>
+        <Text style={{ color: Colors.text }}>Close</Text>
       </TouchableOpacity>
     </View>
   );

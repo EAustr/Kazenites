@@ -19,6 +19,7 @@ export type Listing = {
   unit?: ListingUnit;
   createdAt?: string;
   updatedAt?: string;
+  quantity?: number;
 };
 
 export type User = {
@@ -26,6 +27,7 @@ export type User = {
   email: string;
   name: string;
   surname: string;
-  role: string;
+  role: string; // 'USER' | 'ADMIN'
   city?: string;
+  avatarPath?: string | null;
 };

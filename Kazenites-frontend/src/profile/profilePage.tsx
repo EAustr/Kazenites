@@ -7,21 +7,26 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
-  SafeAreaView,
+  Modal,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthContext } from '../auth/AuthContext';
 import { API_BASE_URL } from '../config';
 import { styles } from '../styles';
 import type { User, Listing } from '../types';
 import { profileStyles } from './style';
+import CreateListingSection from '../home/CreateListingSection.tsx';
+import type { Listing as ListingType } from '../types';
+import { Colors } from '../theme/colors';
 
 type Props = {
   onBack?: () => void;
+  initialTab?: 'profile' | 'listings';
 };
 
-export default function ProfilePage({ onBack }: Props) {
+export default function ProfilePage({ onBack, initialTab = 'profile' }: Props) {
   const { user: authUser, token } = useContext(AuthContext);
-  const [activeTab, setActiveTab] = useState<'profile' | 'listings'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'listings'>(initialTab);
 
   // Full user profile
   const [userProfile, setUserProfile] = useState<User | null>(null);
@@ -38,6 +43,9 @@ export default function ProfilePage({ onBack }: Props) {
   const [userListings, setUserListings] = useState<Listing[]>([]);
   const [listingsLoading, setListingsLoading] = useState(false);
   const [listingsError, setListingsError] = useState<string | null>(null);
+  const [editingListing, setEditingListing] = useState<Listing | null>(null);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     if (authUser && token) {
@@ -72,13 +80,18 @@ export default function ProfilePage({ onBack }: Props) {
       });
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          // Not authorized (token issue); fallback to authUser
+          throw new Error('unauthorized');
+        }
         throw new Error('Failed to fetch profile');
       }
 
       const profile = await response.json();
       setUserProfile(profile);
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      // Avoid red error overlay in dev for expected auth errors
+      console.warn('Error fetching profile (fallback to authUser):', (error as any)?.message);
       // Use authUser as fallback
       setUserProfile({
         id: authUser!.id,
@@ -154,6 +167,37 @@ export default function ProfilePage({ onBack }: Props) {
     }
   };
 
+  const handleUploadAvatar = async () => {
+    if (!token) return;
+    // For now, this is a placeholder using a pre-known file URI. In a real app,
+    // integrate react-native-image-picker or expo-image-picker to get an image file.
+    // TODO: Replace with image picker
+    try {
+      // @ts-ignore
+      const pickedUri: string | undefined = undefined;
+      if (!pickedUri) {
+        Alert.alert('Info', 'Image picker not implemented yet');
+        return;
+      }
+      const form = new FormData();
+      // @ts-ignore
+      form.append('file', { uri: pickedUri, name: 'avatar.jpg', type: 'image/jpeg' });
+      const res = await fetch(`${API_BASE_URL}/api/users/profile/avatar`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      } as any);
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || `Upload failed (${res.status})`);
+      }
+      await fetchUserProfile();
+      Alert.alert('Updated', 'Avatar updated successfully.');
+    } catch (e: any) {
+      Alert.alert('Error', e?.message ?? 'Failed to upload avatar');
+    }
+  };
+
   const handleCancelEdit = () => {
     setEditName(userProfile?.name || '');
     setEditSurname(userProfile?.surname || '');
@@ -164,23 +208,104 @@ export default function ProfilePage({ onBack }: Props) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'APPROVED':
-        return '#22c55e';
+        return Colors.success;
       case 'PENDING':
-        return '#f59e0b';
+        return Colors.warning;
       case 'REJECTED':
-        return '#ef4444';
+        return Colors.error;
       default:
-        return '#6b7280';
+        return Colors.textMuted;
     }
   };
+
+  const handleEditListing = (listing: Listing) => {
+  setEditingListing(listing);
+  setEditModalVisible(true);
+};
+
+const handleDeleteListing = (id: number) => {
+  Alert.alert('Delete Listing', 'Are you sure you want to delete this listing?', [
+    { text: 'Cancel', style: 'cancel' },
+    {
+      text: 'Delete',
+      style: 'destructive',
+      onPress: async () => {
+        if (!token) return;
+        setActionLoading(true);
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/listings/${id}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) {
+            const txt = await res.text();
+            throw new Error(txt || `Delete failed (${res.status})`);
+          }
+          // refresh listings
+          await fetchUserListings();
+          Alert.alert('Deleted', 'Listing removed.');
+        } catch (e: any) {
+          Alert.alert('Error', e?.message ?? 'Failed to delete listing');
+        } finally {
+          setActionLoading(false);
+        }
+      },
+    },
+  ]);
+};
+
+const handleRepublishListing = (id: number) => {
+  Alert.alert('Republish listing', 'Republish this rejected listing for review?', [
+    { text: 'Cancel', style: 'cancel' },
+    {
+      text: 'Republish',
+      onPress: async () => {
+        if (!token) return;
+        setActionLoading(true);
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/listings/${id}/republish`, {
+            method: 'PUT',
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) {
+            const txt = await res.text();
+            throw new Error(txt || `Republish failed (${res.status})`);
+          }
+          await fetchUserListings();
+          Alert.alert('Success', 'Listing resubmitted for approval.');
+        } catch (e: any) {
+          Alert.alert('Error', e?.message ?? 'Failed to republish listing');
+        } finally {
+          setActionLoading(false);
+        }
+      },
+    },
+  ]);
+};
 
   const renderProfileTab = () => (
     <View style={profileStyles.profileContainer}>
       <View style={profileStyles.profileHeader}>
         <View style={profileStyles.avatarContainer}>
-          <Text style={profileStyles.avatarText}>
-            {userProfile?.name?.charAt(0)?.toUpperCase() || 'U'}
-          </Text>
+          {userProfile?.avatarPath ? (
+            // eslint-disable-next-line react/no-unstable-nested-components
+            <View style={{
+              width: 72,
+              height: 72,
+              borderRadius: 36,
+              overflow: 'hidden',
+              backgroundColor: Colors.surfaceAlt,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              {/* Use Image component when imported; kept simple to avoid new imports here */}
+              <Text style={profileStyles.avatarText}>IMG</Text>
+            </View>
+          ) : (
+            <Text style={profileStyles.avatarText}>
+              {userProfile?.name?.charAt(0)?.toUpperCase() || 'U'}
+            </Text>
+          )}
         </View>
         <Text style={profileStyles.userName}>
           {userProfile?.name} {userProfile?.surname}
@@ -191,6 +316,9 @@ export default function ProfilePage({ onBack }: Props) {
             <Text style={profileStyles.adminBadgeText}>Admin</Text>
           </View>
         )}
+        <TouchableOpacity onPress={handleUploadAvatar} style={{ marginTop: 8 }}>
+          <Text style={{ color: Colors.primary, fontWeight: '600' }}>Change photo</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={profileStyles.profileForm}>
@@ -202,7 +330,7 @@ export default function ProfilePage({ onBack }: Props) {
               value={editName}
               onChangeText={setEditName}
               placeholder="Enter first name"
-              placeholderTextColor="#6b7280"
+              placeholderTextColor={Colors.placeholder}
             />
           ) : (
             <Text style={profileStyles.fieldValue}>
@@ -219,7 +347,7 @@ export default function ProfilePage({ onBack }: Props) {
               value={editSurname}
               onChangeText={setEditSurname}
               placeholder="Enter last name"
-              placeholderTextColor="#6b7280"
+              placeholderTextColor={Colors.placeholder}
             />
           ) : (
             <Text style={profileStyles.fieldValue}>
@@ -236,7 +364,7 @@ export default function ProfilePage({ onBack }: Props) {
               value={editCity}
               onChangeText={setEditCity}
               placeholder="Enter city (optional)"
-              placeholderTextColor="#6b7280"
+              placeholderTextColor={Colors.placeholder}
             />
           ) : (
             <Text style={profileStyles.fieldValue}>
@@ -268,7 +396,7 @@ export default function ProfilePage({ onBack }: Props) {
               disabled={editLoading}
             >
               {editLoading ? (
-                <ActivityIndicator color="white" size="small" />
+                <ActivityIndicator color={Colors.text} size="small" />
               ) : (
                 <Text style={profileStyles.saveButtonText}>Save</Text>
               )}
@@ -290,7 +418,7 @@ export default function ProfilePage({ onBack }: Props) {
     <View style={profileStyles.listingsContainer}>
       {listingsLoading ? (
         <View style={profileStyles.centerContainer}>
-          <ActivityIndicator size="large" color="#2563eb" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={profileStyles.loadingText}>
             Loading your listings...
           </Text>
@@ -351,6 +479,33 @@ export default function ProfilePage({ onBack }: Props) {
                   </Text>
                 )}
               </View>
+              {listing.status === 'REJECTED' && (
+  <View style={profileStyles.listingActions}>
+    <TouchableOpacity
+      style={[profileStyles.actionButton, profileStyles.editBtn]}
+      onPress={() => handleEditListing(listing)}
+      disabled={actionLoading}
+    >
+      <Text style={profileStyles.actionText}>Edit</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={[profileStyles.actionButton, profileStyles.deleteBtn]}
+      onPress={() => handleDeleteListing(listing.id)}
+      disabled={actionLoading}
+    >
+      <Text style={profileStyles.actionText}>Delete</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={[profileStyles.actionButton, profileStyles.republishBtn]}
+      onPress={() => handleRepublishListing(listing.id)}
+      disabled={actionLoading}
+    >
+      <Text style={profileStyles.actionText}>Republish</Text>
+    </TouchableOpacity>
+  </View>
+)}
             </View>
           ))}
         </ScrollView>
@@ -360,7 +515,7 @@ export default function ProfilePage({ onBack }: Props) {
 
   if (!authUser) {
     return (
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView edges={['top']} style={styles.screen}>
         <View style={profileStyles.centerContainer}>
           <Text style={profileStyles.errorText}>
             Please log in to view your profile
@@ -372,9 +527,9 @@ export default function ProfilePage({ onBack }: Props) {
 
   if (profileLoading) {
     return (
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView edges={['top']} style={styles.screen}>
         <View style={profileStyles.centerContainer}>
-          <ActivityIndicator size="large" color="#2563eb" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={profileStyles.loadingText}>Loading profile...</Text>
         </View>
       </SafeAreaView>
@@ -382,7 +537,7 @@ export default function ProfilePage({ onBack }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView edges={['top']} style={styles.screen}>
       <View style={profileStyles.header}>
         {onBack && (
           <TouchableOpacity style={profileStyles.backButton} onPress={onBack}>
@@ -429,6 +584,42 @@ export default function ProfilePage({ onBack }: Props) {
       </View>
 
       {activeTab === 'profile' ? renderProfileTab() : renderListingsTab()}
+      <Modal
+  visible={editModalVisible}
+  animationType="slide"
+  onRequestClose={() => {
+    setEditModalVisible(false);
+    setEditingListing(null);
+  }}
+>
+  <SafeAreaView style={styles.screen}>
+    <View style={{ flex: 1 }}>
+      <View style={profileStyles.modalHeader}>
+        <TouchableOpacity
+          onPress={() => {
+            setEditModalVisible(false);
+            setEditingListing(null);
+          }}
+        >
+          <Text style={profileStyles.modalClose}>Close</Text>
+        </TouchableOpacity>
+        <Text style={profileStyles.modalTitle}>Edit listing</Text>
+        <View style={{ width: 48 }} />
+      </View>
+
+      <CreateListingSection
+        isGuest={false}
+        existingListing={editingListing ?? undefined}
+        mode="edit"
+        onCreated={async () => {
+          await fetchUserListings();
+          setEditModalVisible(false);
+          setEditingListing(null);
+        }}
+      />
+    </View>
+  </SafeAreaView>
+</Modal>
     </SafeAreaView>
   );
 }
