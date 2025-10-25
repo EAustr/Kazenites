@@ -26,9 +26,11 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/listings")
 public class ListingController {
     private final ListingRepository repo;
+    private final ListingImageRepository imageRepo;
 
-    public ListingController(ListingRepository repo) {
+    public ListingController(ListingRepository repo, ListingImageRepository imageRepo) {
         this.repo = repo;
+        this.imageRepo = imageRepo;
     }
 
     @GetMapping
@@ -148,8 +150,62 @@ public class ListingController {
         repo.deleteById(id);
     }
 
-    // @GetMapping("/my-listings")
-    // public List<Listing> getMyListings(@AuthenticationPrincipal UserPrincipal principal) {
-    //     return repo.findByOwnerIdOrderByCreatedAtDesc(principal.getUser().getId());
-    // }
+    @GetMapping("/my-listings")
+    public List<Listing> getMyListings(@AuthenticationPrincipal UserPrincipal principal) {
+        return repo.findByOwnerIdOrderByCreatedAtDesc(principal.getUser().getId());
+    }
+
+    @GetMapping("/{id}/images")
+    public List<ListingImage> getListingImages(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+        // Verify listing exists and user has permission to view it
+        Listing l = repo.findById(id).orElseThrow(() -> new ListingNotFoundException(id));
+        boolean isAdmin = principal != null && principal.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin && l.getStatus() != ListingStatus.APPROVED) {
+            throw new ListingForbiddenException();
+        }
+        return imageRepo.findByListingIdOrderBySortOrderAsc(id);
+    }
+
+    @PostMapping("/{id}/images")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ListingImage addListingImage(@PathVariable Long id, @RequestBody ListingImage image, 
+                                       @AuthenticationPrincipal UserPrincipal principal) {
+        // Verify listing exists and user owns it
+        Listing l = repo.findById(id).orElseThrow(() -> new ListingNotFoundException(id));
+        boolean isOwner = l.getOwnerId().equals(principal.getUser().getId());
+        boolean isAdmin = principal.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isOwner && !isAdmin) throw new ListingForbiddenException();
+
+        image.setListingId(id);
+        image.setId(null); // Ensure new image
+        
+        // Set sort order if not provided
+        if (image.getSortOrder() == null) {
+            List<ListingImage> existingImages = imageRepo.findByListingIdOrderBySortOrderAsc(id);
+            int maxOrder = existingImages.stream().mapToInt(img -> img.getSortOrder() != null ? img.getSortOrder() : 0).max().orElse(0);
+            image.setSortOrder(maxOrder + 1);
+        }
+        
+        return imageRepo.save(image);
+    }
+
+    @DeleteMapping("/{listingId}/images/{imageId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteListingImage(@PathVariable Long listingId, @PathVariable Long imageId,
+                                  @AuthenticationPrincipal UserPrincipal principal) {
+        // Verify listing exists and user owns it
+        Listing l = repo.findById(listingId).orElseThrow(() -> new ListingNotFoundException(listingId));
+        boolean isOwner = l.getOwnerId().equals(principal.getUser().getId());
+        boolean isAdmin = principal.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isOwner && !isAdmin) throw new ListingForbiddenException();
+
+        // Verify image exists and belongs to this listing
+        ListingImage image = imageRepo.findById(imageId).orElseThrow(() -> new ImageNotFoundException(imageId));
+        if (!image.getListingId().equals(listingId)) {
+            throw new ListingForbiddenException();
+        }
+
+        imageRepo.deleteById(imageId);
+    }
 }

@@ -8,6 +8,13 @@ export type ListingStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export type ListingUnit = 'KG' | 'G';
 
+export type ListingImage = {
+  id: number;
+  listingId: number;
+  path: string;
+  sortOrder: number;
+};
+
 export type Listing = {
   id: number;
   title: string;
@@ -17,6 +24,7 @@ export type Listing = {
   categoryId: number;
   status: ListingStatus;
   unit?: ListingUnit;
+  images?: ListingImage[];
   createdAt?: string;
   updatedAt?: string;
   quantity?: number;

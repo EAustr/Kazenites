@@ -8,7 +8,15 @@ import {
   StyleSheet,
   Modal,
   Pressable,
+  Image,
+  Alert,
 } from 'react-native';
+import {
+  launchImageLibrary,
+  launchCamera,
+  ImagePickerResponse,
+  MediaType,
+} from 'react-native-image-picker';
 import { API_BASE_URL } from '../config';
 import { Colors } from '../theme/colors';
 import type { Category, Listing, ListingUnit } from '../types';
@@ -54,6 +62,10 @@ export default function CreateListingSection({
   const [createError, setCreateError] = useState<string | null>(null);
   const [createLoading, setCreateLoading] = useState(false);
   const [pendingCategoryId, setPendingCategoryId] = useState('');
+  const [selectedImages, setSelectedImages] = useState<
+    { uri: string; base64?: string }[]
+  >([]);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   
 
@@ -112,6 +124,98 @@ export default function CreateListingSection({
     return match?.name ?? null;
   }, [categories, createCategoryId]);
 
+  const selectImage = () => {
+    console.log('selectImage called');
+    Alert.alert('Select Image', 'Choose an option', [
+      {
+        text: 'Camera',
+        onPress: () => {
+          console.log('Camera button pressed');
+          openCamera();
+        },
+      },
+      {
+        text: 'Gallery',
+        onPress: () => {
+          console.log('Gallery button pressed');
+          openGallery();
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const openCamera = () => {
+    console.log('Opening camera...');
+    const options = {
+      mediaType: 'photo' as MediaType,
+      quality: 0.8,
+      includeBase64: true,
+    };
+
+    launchCamera(options, (response: ImagePickerResponse) => {
+      console.log('Camera response:', response);
+      if (response.didCancel) {
+        console.log('User cancelled camera');
+        return;
+      }
+      if (response.errorMessage) {
+        console.log('Camera error:', response.errorMessage);
+        Alert.alert('Error', response.errorMessage);
+        return;
+      }
+      if (response.assets && response.assets[0]) {
+        const asset = response.assets[0];
+        console.log('Adding image from camera:', asset.uri);
+        setSelectedImages([
+          ...selectedImages,
+          {
+            uri: asset.uri!,
+            base64: asset.base64,
+          },
+        ]);
+      }
+    });
+  };
+
+  const openGallery = () => {
+    console.log('Opening gallery...');
+    const options = {
+      mediaType: 'photo' as MediaType,
+      quality: 0.8,
+      includeBase64: true,
+    };
+
+    launchImageLibrary(options, (response: ImagePickerResponse) => {
+      console.log('Gallery response:', response);
+      if (response.didCancel) {
+        console.log('User cancelled gallery');
+        return;
+      }
+      if (response.errorMessage) {
+        console.log('Gallery error:', response.errorMessage);
+        Alert.alert('Error', response.errorMessage);
+        return;
+      }
+      if (response.assets && response.assets[0]) {
+        const asset = response.assets[0];
+        console.log('Adding image from gallery:', asset.uri);
+        setSelectedImages([
+          ...selectedImages,
+          {
+            uri: asset.uri!,
+            base64: asset.base64,
+          },
+        ]);
+      }
+    });
+  };
+
+  const removeImage = (index: number) => {
+    const newImages = selectedImages.filter((_, i) => i !== index);
+    setSelectedImages(newImages);
+  };
+
   const resetForm = () => {
     setCreateTitle('');
     setCreatePrice('');
@@ -120,6 +224,8 @@ export default function CreateListingSection({
     setCreateCity('');
     setCreateUnit('KG');
     setCreateQuantity('');
+    setSelectedImages([]);
+    setImageError(null);
   };
 
   const handleSaveListing = async () => {
@@ -197,11 +303,69 @@ export default function CreateListingSection({
       throw new Error(text || `Request failed (${res.status})`);
     }
 
-    if (mode === 'edit') {
-      setCreateMessage('Listing updated! Pending review if it was rejected.');
-    } else {
+      const createdListing = await res.json();
+
+      // Add images if provided
+      if (selectedImages.length > 0) {
+        try {
+          for (let i = 0; i < selectedImages.length; i++) {
+            const image = selectedImages[i];
+            console.log(
+              `Uploading image ${i + 1} for listing ${createdListing.id}`,
+            );
+
+            const imagePath = image.base64
+              ? `data:image/jpeg;base64,${image.base64}`
+              : image.uri;
+            console.log(`Image path length: ${imagePath.length}`);
+
+            const response = await fetch(
+              `${API_BASE_URL}/api/listings/${createdListing.id}/images`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  path: imagePath,
+                  sortOrder: i + 1,
+                }),
+              },
+            );
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error(
+                `Failed to upload image ${i + 1}:`,
+                response.status,
+                errorText,
+              );
+              throw new Error(
+                `Failed to upload image ${i + 1}: ${response.status}`,
+              );
+            } else {
+              console.log(`Successfully uploaded image ${i + 1}`);
+            }
+          }
+        } catch (imageError) {
+          console.error('Failed to add some images:', imageError);
+          setImageError('Listing created but some images failed to upload.');
+        }
+      }
+
       setCreateMessage('Listing submitted! Pending approval.');
       resetForm();
+
+      // Call onCreated callback after everything is done, including image uploads
+      // Backend operations are already complete at this point since we awaited all fetch calls
+      if (onCreated) {
+        await onCreated();
+      }
+    } catch (e: any) {
+      setCreateError(e?.message ?? 'Failed to create listing');
+    } finally {
+      setCreateLoading(false);
     }
 
     await onCreated?.();
@@ -282,8 +446,8 @@ export default function CreateListingSection({
               styles.categorySelect,
               pressed && styles.categorySelectPressed,
               !categories.length &&
-              !categoryFetchError &&
-              styles.categorySelectDisabled,
+                !categoryFetchError &&
+                styles.categorySelectDisabled,
             ]}
             disabled={!categories.length && !categoryFetchError}
             onPress={() => {
@@ -417,6 +581,42 @@ export default function CreateListingSection({
           onChangeText={setCreateDescription}
           style={[styles.createInput, styles.createTextarea]}
         />
+
+        {/* Images Section */}
+        <View style={styles.imageSection}>
+          <Text style={styles.imageSectionTitle}>Images (optional)</Text>
+
+          {/* Display selected images */}
+          {selectedImages.length > 0 && (
+            <ScrollView horizontal style={styles.imagePreviewContainer}>
+              {selectedImages.map((image, index) => (
+                <View key={index} style={styles.imagePreviewItem}>
+                  <Image
+                    source={{ uri: image.uri }}
+                    style={styles.imagePreview}
+                  />
+                  <TouchableOpacity
+                    style={styles.removeImagePreviewBtn}
+                    onPress={() => removeImage(index)}
+                  >
+                    <Text style={styles.removeImagePreviewBtnText}>×</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+          )}
+
+          {/* Add image button */}
+          {selectedImages.length < 5 && (
+            <TouchableOpacity style={styles.addImageBtn} onPress={selectImage}>
+              <Text style={styles.addImageBtnText}>📷 Add Image</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {imageError ? (
+          <Text style={styles.createError}>{imageError}</Text>
+        ) : null}
         {createError ? (
           <Text style={styles.createError}>{createError}</Text>
         ) : null}
@@ -650,5 +850,81 @@ const styles = StyleSheet.create({
   secondaryBtnPrimaryText: {
     color: 'white',
     fontWeight: '700',
+  },
+  imageSection: {
+    marginTop: 16,
+  },
+  imageSectionTitle: {
+    color: '#0f172a',
+    fontWeight: '600',
+    marginBottom: 8,
+    fontSize: 16,
+  },
+  imageInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  imageInput: {
+    flex: 1,
+  },
+  removeImageBtn: {
+    marginLeft: 8,
+    width: 30,
+    height: 30,
+    backgroundColor: '#ef4444',
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeImageBtnText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  removeImagePreviewBtn: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    width: 20,
+    height: 20,
+    backgroundColor: '#ef4444',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeImagePreviewBtnText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  addImageBtn: {
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#cbd5f5',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  addImageBtnText: {
+    color: '#2563eb',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  imagePreviewContainer: {
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  imagePreviewItem: {
+    marginRight: 8,
+    position: 'relative',
+  },
+  imagePreview: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
   },
 });

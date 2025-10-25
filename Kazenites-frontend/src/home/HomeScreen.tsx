@@ -7,6 +7,7 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { API_BASE_URL } from '../config';
 import type { Listing, ListingUnit, User } from '../types';
@@ -15,6 +16,7 @@ import Header from '../home/Header';
 import CreateListingSection from '../home/CreateListingSection';
 import GuestNotice from '../home/Guest';
 import AdminPanel from '../admin/AdminPanel';
+import ListingImage from '../components/ListingImage';
 import { styles } from '../styles';
 import { Colors } from '../theme/colors';
 
@@ -45,6 +47,9 @@ export default function HomeScreen({
 
   // Tabs
   const [activeTab, setActiveTab] = useState<'browse' | 'create'>('browse');
+
+  // Refresh key to force component updates
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Admin Panel
   const [showAdmin, setShowAdmin] = useState(false);
@@ -129,6 +134,13 @@ export default function HomeScreen({
     }
   };
 
+  // Combined refresh function that updates both data and forces component refresh
+  const refreshData = async () => {
+    await fetchListings();
+    await fetchPendingListings();
+    setRefreshKey(prev => prev + 1); // Force ListingImage components to refresh
+  };
+
   const handleApprove = async (id: number) => {
     if (!user || user.role !== 'ADMIN') return;
     if (!token) {
@@ -144,8 +156,7 @@ export default function HomeScreen({
         },
       );
       if (!res.ok) throw new Error(`Approve failed (${res.status})`);
-      await fetchPendingListings();
-      await fetchListings();
+      await refreshData();
     } catch (e: any) {
       console.error('handleApprove error:', e);
     }
@@ -166,37 +177,49 @@ export default function HomeScreen({
         },
       );
       if (!res.ok) throw new Error(`Reject failed (${res.status})`);
-      await fetchPendingListings();
-      await fetchListings();
+      await refreshData();
     } catch (e: any) {
       console.error('handleReject error:', e);
     }
   };
 
   useEffect(() => {
-    fetchListings();
-    fetchPendingListings();
+    refreshData();
     fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  const handleTabPress = (tab: 'browse' | 'create') => setActiveTab(tab);
+  const handleTabPress = async (tab: 'browse' | 'create') => {
+    setActiveTab(tab);
+    // Refresh data when switching to browse tab
+    if (tab === 'browse') {
+      await refreshData();
+    }
+  };
 
   const renderItem = ({ item }: { item: Listing }) => {
     const isPending = item.status === 'PENDING' && user?.role === 'ADMIN';
 
     return (
       <View style={styles.card}>
-        <View style={styles.cardRow}>
-          <Text style={styles.cardTitle} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <Text style={styles.cardPrice}>€{item.price.toFixed(2)}</Text>
+        {/* Image at the top if available */}
+        <View style={styles.cardImageContainer}>
+          <ListingImage key={`${item.id}-${refreshKey}`} listingId={item.id} width={80} height={80} />
+          <View style={styles.cardContent}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle} numberOfLines={1}>
+                {item.title}
+              </Text>
+              <Text style={styles.cardPrice}>€{item.price.toFixed(2)}</Text>
+            </View>
+            {item.city && <Text style={styles.cardMeta}>{item.city}</Text>}
+          </View>
         </View>
-        {item.city && <Text style={styles.cardMeta}>{item.city}</Text>}
-        <Text style={styles.cardDesc} numberOfLines={2}>
-          {item.description || ''}
+        
+        <Text style={styles.cardDesc} numberOfLines={3}>
+          {item.description || 'No description provided'}
         </Text>
+        
         <View style={styles.pillRow}>
           <Text
             style={[
@@ -318,7 +341,7 @@ export default function HomeScreen({
             isGuest={isGuest}
             onLoginPress={onLoginPress}
             onRegisterPress={onRegisterPress}
-            onCreated={fetchListings}
+            onCreated={refreshData}
           />
         </ScrollView>
       )}
