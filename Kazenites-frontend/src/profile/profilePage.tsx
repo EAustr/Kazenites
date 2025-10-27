@@ -479,7 +479,7 @@ const handleRepublishListing = (id: number) => {
                   </Text>
                 )}
               </View>
-              {listing.status === 'REJECTED' && (
+              {(listing.status === 'REJECTED' || listing.status === 'APPROVED') && (
   <View style={profileStyles.listingActions}>
     <TouchableOpacity
       style={[profileStyles.actionButton, profileStyles.editBtn]}
@@ -497,15 +497,18 @@ const handleRepublishListing = (id: number) => {
       <Text style={profileStyles.actionText}>Delete</Text>
     </TouchableOpacity>
 
-    <TouchableOpacity
-      style={[profileStyles.actionButton, profileStyles.republishBtn]}
-      onPress={() => handleRepublishListing(listing.id)}
-      disabled={actionLoading}
-    >
-      <Text style={profileStyles.actionText}>Republish</Text>
-    </TouchableOpacity>
+    {listing.status === 'REJECTED' && (
+      <TouchableOpacity
+        style={[profileStyles.actionButton, profileStyles.republishBtn]}
+        onPress={() => handleRepublishListing(listing.id)}
+        disabled={actionLoading}
+      >
+        <Text style={profileStyles.actionText}>Republish</Text>
+      </TouchableOpacity>
+    )}
   </View>
 )}
+
             </View>
           ))}
         </ScrollView>

@@ -101,23 +101,33 @@ public class ListingController {
 
     @PutMapping("/{id}")
     public Listing update(@PathVariable Long id, @Valid @RequestBody ListingUpdateRequest req,
-                          @AuthenticationPrincipal UserPrincipal principal) {
-        Listing l = repo.findById(id).orElseThrow(() -> new ListingNotFoundException(id));
-        boolean isOwner = l.getOwnerId().equals(principal.getUser().getId());
-        boolean isAdmin = principal.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        if (!isOwner && !isAdmin) throw new ListingForbiddenException();
+                      @AuthenticationPrincipal UserPrincipal principal) {
+    Listing l = repo.findById(id).orElseThrow(() -> new ListingNotFoundException(id));
 
-        if (req.title != null) l.setTitle(req.title);
-        if (req.description != null) l.setDescription(req.description);
-        if (req.price != null) l.setPrice(req.price);
-        if (req.currency != null) l.setCurrency(req.currency);
-        if (req.quantity != null) l.setQuantity(req.quantity);
-        if (req.unit != null) l.setUnit(req.unit);
-        if (req.city != null) l.setCity(req.city);
-        if (req.categoryId != null) l.setCategoryId(req.categoryId);
-
-        return repo.save(l);
+    if (principal == null) {
+        throw new ListingForbiddenException();
     }
+
+    boolean isOwner = l.getOwnerId().equals(principal.getUser().getId());
+    boolean isAdmin = principal.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+    if (!isOwner && !isAdmin) throw new ListingForbiddenException();
+
+    if (req.title != null) l.setTitle(req.title);
+    if (req.description != null) l.setDescription(req.description);
+    if (req.price != null) l.setPrice(req.price);
+    if (req.currency != null) l.setCurrency(req.currency);
+    if (req.quantity != null) l.setQuantity(req.quantity);
+    if (req.unit != null) l.setUnit(req.unit);
+    if (req.city != null) l.setCity(req.city);
+    if (req.categoryId != null) l.setCategoryId(req.categoryId);
+
+    if (isOwner && l.getStatus() == ListingStatus.APPROVED) {
+        l.setStatus(ListingStatus.PENDING);
+    }
+
+    return repo.save(l);
+}
+
 
     @PutMapping("/{id}/republish")
     public Listing republish(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
