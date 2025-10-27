@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   Image,
 } from 'react-native';
 import { API_BASE_URL } from '../config';
-import type { Listing, ListingUnit, User } from '../types';
+import type { Listing, ListingUnit, User, Category } from '../types';
 import { AuthContext } from '../auth/AuthContext';
 import Header from '../home/Header';
 import CreateListingSection from '../home/CreateListingSection';
@@ -19,6 +19,9 @@ import AdminPanel from '../admin/AdminPanel';
 import ListingImage from '../components/ListingImage';
 import { styles } from '../styles';
 import { Colors } from '../theme/colors';
+import FilterMenu from './FilterMenu';
+import SortMenu from './SortMenu';
+import { applyFilterSort, uniqueCities, type ListingFilters, type SortOption } from '../utils/listingFilters';
 
 type Props = {
   isGuest: boolean;
@@ -44,6 +47,7 @@ export default function HomeScreen({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<Listing[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   // Tabs
   const [activeTab, setActiveTab] = useState<'browse' | 'create'>('browse');
@@ -58,18 +62,51 @@ export default function HomeScreen({
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
 
+  // Filters & sorting UI state
+  const [filters, setFilters] = useState<ListingFilters>({});
+  const [sort, setSort] = useState<SortOption>('NEWEST');
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [showSortMenu, setShowSortMenu] = useState(false);
+
+  // Derived data
+  const availableCities = useMemo(() => uniqueCities(items), [items]);
+  const filteredItems = useMemo(
+    () => applyFilterSort(items, filters, sort),
+    [items, filters, sort],
+  );
+
   const fetchListings = async () => {
     setLoading(true);
     setError(null);
     try {
-      const url =
-        user?.role === 'ADMIN'
-          ? `${API_BASE_URL}/api/listings?all=true${
-              q ? `&q=${encodeURIComponent(q)}` : ''
-            }`
-          : q
-          ? `${API_BASE_URL}/api/listings?q=${encodeURIComponent(q)}`
-          : `${API_BASE_URL}/api/listings`;
+      // Build query using current search + filters + sort (backend may ignore unknown params)
+      const params: string[] = [];
+      if (q) params.push(`q=${encodeURIComponent(q)}`);
+      if (filters.categoryId != null) params.push(`categoryId=${encodeURIComponent(String(filters.categoryId))}`);
+      if (filters.city) params.push(`city=${encodeURIComponent(filters.city)}`);
+      if (filters.priceMin != null) params.push(`minPrice=${encodeURIComponent(String(filters.priceMin))}`);
+      if (filters.priceMax != null) params.push(`maxPrice=${encodeURIComponent(String(filters.priceMax))}`);
+  if (filters.unit) params.push(`unit=${encodeURIComponent(String(filters.unit))}`);
+
+      // sort mapping
+      const sortMap: Record<string, { field: string; order: 'asc' | 'desc' }> = {
+        PRICE_ASC: { field: 'price', order: 'asc' },
+        PRICE_DESC: { field: 'price', order: 'desc' },
+        TITLE_ASC: { field: 'title', order: 'asc' },
+        TITLE_DESC: { field: 'title', order: 'desc' },
+        NEWEST: { field: 'createdAt', order: 'desc' },
+        OLDEST: { field: 'createdAt', order: 'asc' },
+      };
+      const s = sortMap[sort];
+      if (s) {
+        params.push(`sort=${encodeURIComponent(s.field)}`);
+        params.push(`order=${encodeURIComponent(s.order)}`);
+      }
+
+      const base = `${API_BASE_URL}/api/listings`;
+      const url = user?.role === 'ADMIN'
+        ? `${base}?all=true${params.length ? `&${params.join('&')}` : ''}`
+        : `${base}${params.length ? `?${params.join('&')}` : ''}`;
 
       const res = await fetch(url, {
         headers:
@@ -84,6 +121,19 @@ export default function HomeScreen({
       setError(e.message || 'Failed to load');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch categories for filter options
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/categories`);
+      if (!res.ok) throw new Error(`Failed to load categories (${res.status})`);
+      const json = await res.json();
+      setCategories(json);
+    } catch (e) {
+      // non-blocking for browsing
+      console.warn('Failed to fetch categories');
     }
   };
 
@@ -185,6 +235,7 @@ export default function HomeScreen({
 
   useEffect(() => {
     refreshData();
+    fetchCategories();
     fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
@@ -301,6 +352,28 @@ export default function HomeScreen({
               <Text style={styles.searchBtnText}>Search</Text>
             </TouchableOpacity>
           </View>
+          <View style={styles.filterSortRow}>
+            <TouchableOpacity
+              style={styles.smallIconBtn}
+              onPress={() => setShowFilterMenu(true)}
+            >
+              <Text style={styles.smallIconBtnText}>Filters ▾</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.smallIconBtn}
+              onPress={() => setShowSortMenu(true)}
+            >
+              <Text style={styles.smallIconBtnText}>Sort ▾</Text>
+            </TouchableOpacity>
+            {Boolean(filters.categoryId || filters.city || filters.priceMin != null || filters.priceMax != null || filters.unit) && (
+              <TouchableOpacity
+                style={[styles.smallIconBtn, { marginLeft: 'auto', backgroundColor: Colors.surfaceAlt }]}
+                onPress={() => setFilters({})}
+              >
+                <Text style={styles.smallIconBtnText}>Reset filters</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           {loading && (
             <View style={styles.centerRow}>
               <ActivityIndicator />
@@ -312,12 +385,30 @@ export default function HomeScreen({
             </View>
           )}
           <FlatList
-            data={items}
+            data={filteredItems}
             renderItem={renderItem}
             keyExtractor={x => String(x.id)}
             contentContainerStyle={styles.list}
             style={{ flex: 1 }}
             ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+          />
+          <FilterMenu
+            visible={showFilterMenu}
+            onClose={() => setShowFilterMenu(false)}
+            categories={categories}
+            availableCities={availableCities}
+            value={filters}
+            onChange={setFilters}
+            onReset={() => {
+              setFilters({});
+              setShowFilterMenu(false);
+            }}
+          />
+          <SortMenu
+            visible={showSortMenu}
+            onClose={() => setShowSortMenu(false)}
+            value={sort}
+            onChange={setSort}
           />
         </>
       ) : isGuest ? (

@@ -86,6 +86,22 @@ export const styles = StyleSheet.create({
     marginLeft: 8,
   },
   searchBtnText: { color: Colors.text, fontWeight: '700' },
+  filterSortRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    marginTop: -8,
+    marginBottom: 8,
+    gap: 8,
+  },
+  smallIconBtn: {
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  smallIconBtnText: { color: Colors.textSubtle, fontWeight: '600' },
   tabBarWrapper: {
     paddingHorizontal: 16,
     paddingTop: 12,
