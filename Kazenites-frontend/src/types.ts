@@ -22,6 +22,7 @@ export type Listing = {
   price: number;
   city: string;
   categoryId: number;
+  ownerId: number;
   status: ListingStatus;
   unit?: ListingUnit;
   images?: ListingImage[];

@@ -17,11 +17,17 @@ import CreateListingSection from '../home/CreateListingSection';
 import GuestNotice from '../home/Guest';
 import AdminPanel from '../admin/AdminPanel';
 import ListingImage from '../components/ListingImage';
+import ListingDetailModal from '../components/ListingDetailModal';
 import { styles } from '../styles';
 import { Colors } from '../theme/colors';
 import FilterMenu from './FilterMenu';
 import SortMenu from './SortMenu';
-import { applyFilterSort, uniqueCities, type ListingFilters, type SortOption } from '../utils/listingFilters';
+import {
+  applyFilterSort,
+  uniqueCities,
+  type ListingFilters,
+  type SortOption,
+} from '../utils/listingFilters';
 
 type Props = {
   isGuest: boolean;
@@ -68,6 +74,10 @@ export default function HomeScreen({
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
 
+  // Listing detail modal
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+
   // Derived data
   const availableCities = useMemo(() => uniqueCities(items), [items]);
   const filteredItems = useMemo(
@@ -82,21 +92,28 @@ export default function HomeScreen({
       // Build query using current search + filters + sort (backend may ignore unknown params)
       const params: string[] = [];
       if (q) params.push(`q=${encodeURIComponent(q)}`);
-      if (filters.categoryId != null) params.push(`categoryId=${encodeURIComponent(String(filters.categoryId))}`);
+      if (filters.categoryId != null)
+        params.push(
+          `categoryId=${encodeURIComponent(String(filters.categoryId))}`,
+        );
       if (filters.city) params.push(`city=${encodeURIComponent(filters.city)}`);
-      if (filters.priceMin != null) params.push(`minPrice=${encodeURIComponent(String(filters.priceMin))}`);
-      if (filters.priceMax != null) params.push(`maxPrice=${encodeURIComponent(String(filters.priceMax))}`);
-  if (filters.unit) params.push(`unit=${encodeURIComponent(String(filters.unit))}`);
+      if (filters.priceMin != null)
+        params.push(`minPrice=${encodeURIComponent(String(filters.priceMin))}`);
+      if (filters.priceMax != null)
+        params.push(`maxPrice=${encodeURIComponent(String(filters.priceMax))}`);
+      if (filters.unit)
+        params.push(`unit=${encodeURIComponent(String(filters.unit))}`);
 
       // sort mapping
-      const sortMap: Record<string, { field: string; order: 'asc' | 'desc' }> = {
-        PRICE_ASC: { field: 'price', order: 'asc' },
-        PRICE_DESC: { field: 'price', order: 'desc' },
-        TITLE_ASC: { field: 'title', order: 'asc' },
-        TITLE_DESC: { field: 'title', order: 'desc' },
-        NEWEST: { field: 'createdAt', order: 'desc' },
-        OLDEST: { field: 'createdAt', order: 'asc' },
-      };
+      const sortMap: Record<string, { field: string; order: 'asc' | 'desc' }> =
+        {
+          PRICE_ASC: { field: 'price', order: 'asc' },
+          PRICE_DESC: { field: 'price', order: 'desc' },
+          TITLE_ASC: { field: 'title', order: 'asc' },
+          TITLE_DESC: { field: 'title', order: 'desc' },
+          NEWEST: { field: 'createdAt', order: 'desc' },
+          OLDEST: { field: 'createdAt', order: 'asc' },
+        };
       const s = sortMap[sort];
       if (s) {
         params.push(`sort=${encodeURIComponent(s.field)}`);
@@ -104,9 +121,10 @@ export default function HomeScreen({
       }
 
       const base = `${API_BASE_URL}/api/listings`;
-      const url = user?.role === 'ADMIN'
-        ? `${base}?all=true${params.length ? `&${params.join('&')}` : ''}`
-        : `${base}${params.length ? `?${params.join('&')}` : ''}`;
+      const url =
+        user?.role === 'ADMIN'
+          ? `${base}?all=true${params.length ? `&${params.join('&')}` : ''}`
+          : `${base}${params.length ? `?${params.join('&')}` : ''}`;
 
       const res = await fetch(url, {
         headers:
@@ -252,37 +270,50 @@ export default function HomeScreen({
     const isPending = item.status === 'PENDING' && user?.role === 'ADMIN';
 
     return (
-      <View style={styles.card}>
-        {/* Image at the top if available */}
-        <View style={styles.cardImageContainer}>
-          <ListingImage key={`${item.id}-${refreshKey}`} listingId={item.id} width={80} height={80} />
-          <View style={styles.cardContent}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle} numberOfLines={1}>
-                {item.title}
-              </Text>
-              <Text style={styles.cardPrice}>€{item.price.toFixed(2)}</Text>
+      <TouchableOpacity
+        onPress={() => {
+          setSelectedListing(item);
+          setShowDetailModal(true);
+        }}
+        activeOpacity={0.7}
+      >
+        <View style={styles.card}>
+          {/* Image at the top if available */}
+          <View style={styles.cardImageContainer}>
+            <ListingImage
+              key={`${item.id}-${refreshKey}`}
+              listingId={item.id}
+              width={80}
+              height={80}
+            />
+            <View style={styles.cardContent}>
+              <View style={styles.cardHeaderRow}>
+                <Text style={styles.cardTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={styles.cardPrice}>€{item.price.toFixed(2)}</Text>
+              </View>
+              {item.city && <Text style={styles.cardMeta}>{item.city}</Text>}
             </View>
-            {item.city && <Text style={styles.cardMeta}>{item.city}</Text>}
+          </View>
+
+          <Text style={styles.cardDesc} numberOfLines={3}>
+            {item.description || 'No description provided'}
+          </Text>
+
+          <View style={styles.pillRow}>
+            <Text
+              style={[
+                styles.pill,
+                isPending && { backgroundColor: Colors.warning, color: '#000' },
+              ]}
+            >
+              {item.status}
+            </Text>
+            {item.unit && <Text style={styles.pill}>{item.unit}</Text>}
           </View>
         </View>
-        
-        <Text style={styles.cardDesc} numberOfLines={3}>
-          {item.description || 'No description provided'}
-        </Text>
-        
-        <View style={styles.pillRow}>
-          <Text
-            style={[
-              styles.pill,
-              isPending && { backgroundColor: Colors.warning, color: '#000' },
-            ]}
-          >
-            {item.status}
-          </Text>
-          {item.unit && <Text style={styles.pill}>{item.unit}</Text>}
-        </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -365,9 +396,18 @@ export default function HomeScreen({
             >
               <Text style={styles.smallIconBtnText}>Sort ▾</Text>
             </TouchableOpacity>
-            {Boolean(filters.categoryId || filters.city || filters.priceMin != null || filters.priceMax != null || filters.unit) && (
+            {Boolean(
+              filters.categoryId ||
+                filters.city ||
+                filters.priceMin != null ||
+                filters.priceMax != null ||
+                filters.unit,
+            ) && (
               <TouchableOpacity
-                style={[styles.smallIconBtn, { marginLeft: 'auto', backgroundColor: Colors.surfaceAlt }]}
+                style={[
+                  styles.smallIconBtn,
+                  { marginLeft: 'auto', backgroundColor: Colors.surfaceAlt },
+                ]}
                 onPress={() => setFilters({})}
               >
                 <Text style={styles.smallIconBtnText}>Reset filters</Text>
@@ -449,6 +489,17 @@ export default function HomeScreen({
           onClose={() => setShowAdmin(false)}
         />
       )}
+
+      {/* Listing Detail Modal */}
+      <ListingDetailModal
+        visible={showDetailModal}
+        listing={selectedListing}
+        onClose={() => {
+          setShowDetailModal(false);
+          setSelectedListing(null);
+        }}
+        categories={categories}
+      />
     </View>
   );
 }
