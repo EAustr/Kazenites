@@ -26,7 +26,9 @@ type Props = {
 
 export default function ProfilePage({ onBack, initialTab = 'profile' }: Props) {
   const { user: authUser, token } = useContext(AuthContext);
-  const [activeTab, setActiveTab] = useState<'profile' | 'listings'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'profile' | 'listings'>(
+    initialTab,
+  );
 
   // Full user profile
   const [userProfile, setUserProfile] = useState<User | null>(null);
@@ -37,6 +39,7 @@ export default function ProfilePage({ onBack, initialTab = 'profile' }: Props) {
   const [editName, setEditName] = useState('');
   const [editSurname, setEditSurname] = useState('');
   const [editCity, setEditCity] = useState('');
+  const [editPhoneNumber, setEditPhoneNumber] = useState('');
   const [editLoading, setEditLoading] = useState(false);
 
   // User's listings
@@ -58,6 +61,7 @@ export default function ProfilePage({ onBack, initialTab = 'profile' }: Props) {
       setEditName(userProfile.name);
       setEditSurname(userProfile.surname);
       setEditCity(userProfile.city || '');
+      setEditPhoneNumber(userProfile.phoneNumber || '');
     }
   }, [userProfile]);
 
@@ -91,7 +95,10 @@ export default function ProfilePage({ onBack, initialTab = 'profile' }: Props) {
       setUserProfile(profile);
     } catch (error) {
       // Avoid red error overlay in dev for expected auth errors
-      console.warn('Error fetching profile (fallback to authUser):', (error as any)?.message);
+      console.warn(
+        'Error fetching profile (fallback to authUser):',
+        (error as any)?.message,
+      );
       // Use authUser as fallback
       setUserProfile({
         id: authUser!.id,
@@ -148,6 +155,7 @@ export default function ProfilePage({ onBack, initialTab = 'profile' }: Props) {
           name: editName.trim(),
           surname: editSurname.trim(),
           city: editCity.trim() || null,
+          phoneNumber: editPhoneNumber.trim() || null,
         }),
       });
 
@@ -181,7 +189,11 @@ export default function ProfilePage({ onBack, initialTab = 'profile' }: Props) {
       }
       const form = new FormData();
       // @ts-ignore
-      form.append('file', { uri: pickedUri, name: 'avatar.jpg', type: 'image/jpeg' });
+      form.append('file', {
+        uri: pickedUri,
+        name: 'avatar.jpg',
+        type: 'image/jpeg',
+      });
       const res = await fetch(`${API_BASE_URL}/api/users/profile/avatar`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
@@ -202,7 +214,14 @@ export default function ProfilePage({ onBack, initialTab = 'profile' }: Props) {
     setEditName(userProfile?.name || '');
     setEditSurname(userProfile?.surname || '');
     setEditCity(userProfile?.city || '');
+    setEditPhoneNumber(userProfile?.phoneNumber || '');
     setIsEditing(false);
+  };
+
+  const handlePhoneNumberChange = (text: string) => {
+    // Only allow numbers, spaces, +, -, (, and )
+    const filtered = text.replace(/[^0-9+\-() ]/g, '');
+    setEditPhoneNumber(filtered);
   };
 
   const getStatusColor = (status: string) => {
@@ -219,85 +238,98 @@ export default function ProfilePage({ onBack, initialTab = 'profile' }: Props) {
   };
 
   const handleEditListing = (listing: Listing) => {
-  setEditingListing(listing);
-  setEditModalVisible(true);
-};
+    setEditingListing(listing);
+    setEditModalVisible(true);
+  };
 
-const handleDeleteListing = (id: number) => {
-  Alert.alert('Delete Listing', 'Are you sure you want to delete this listing?', [
-    { text: 'Cancel', style: 'cancel' },
-    {
-      text: 'Delete',
-      style: 'destructive',
-      onPress: async () => {
-        if (!token) return;
-        setActionLoading(true);
-        try {
-          const res = await fetch(`${API_BASE_URL}/api/listings/${id}`, {
-            method: 'DELETE',
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (!res.ok) {
-            const txt = await res.text();
-            throw new Error(txt || `Delete failed (${res.status})`);
-          }
-          // refresh listings
-          await fetchUserListings();
-          Alert.alert('Deleted', 'Listing removed.');
-        } catch (e: any) {
-          Alert.alert('Error', e?.message ?? 'Failed to delete listing');
-        } finally {
-          setActionLoading(false);
-        }
-      },
-    },
-  ]);
-};
+  const handleDeleteListing = (id: number) => {
+    Alert.alert(
+      'Delete Listing',
+      'Are you sure you want to delete this listing?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!token) return;
+            setActionLoading(true);
+            try {
+              const res = await fetch(`${API_BASE_URL}/api/listings/${id}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (!res.ok) {
+                const txt = await res.text();
+                throw new Error(txt || `Delete failed (${res.status})`);
+              }
+              // refresh listings
+              await fetchUserListings();
+              Alert.alert('Deleted', 'Listing removed.');
+            } catch (e: any) {
+              Alert.alert('Error', e?.message ?? 'Failed to delete listing');
+            } finally {
+              setActionLoading(false);
+            }
+          },
+        },
+      ],
+    );
+  };
 
-const handleRepublishListing = (id: number) => {
-  Alert.alert('Republish listing', 'Republish this rejected listing for review?', [
-    { text: 'Cancel', style: 'cancel' },
-    {
-      text: 'Republish',
-      onPress: async () => {
-        if (!token) return;
-        setActionLoading(true);
-        try {
-          const res = await fetch(`${API_BASE_URL}/api/listings/${id}/republish`, {
-            method: 'PUT',
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (!res.ok) {
-            const txt = await res.text();
-            throw new Error(txt || `Republish failed (${res.status})`);
-          }
-          await fetchUserListings();
-          Alert.alert('Success', 'Listing resubmitted for approval.');
-        } catch (e: any) {
-          Alert.alert('Error', e?.message ?? 'Failed to republish listing');
-        } finally {
-          setActionLoading(false);
-        }
-      },
-    },
-  ]);
-};
+  const handleRepublishListing = (id: number) => {
+    Alert.alert(
+      'Republish listing',
+      'Republish this rejected listing for review?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Republish',
+          onPress: async () => {
+            if (!token) return;
+            setActionLoading(true);
+            try {
+              const res = await fetch(
+                `${API_BASE_URL}/api/listings/${id}/republish`,
+                {
+                  method: 'PUT',
+                  headers: { Authorization: `Bearer ${token}` },
+                },
+              );
+              if (!res.ok) {
+                const txt = await res.text();
+                throw new Error(txt || `Republish failed (${res.status})`);
+              }
+              await fetchUserListings();
+              Alert.alert('Success', 'Listing resubmitted for approval.');
+            } catch (e: any) {
+              Alert.alert('Error', e?.message ?? 'Failed to republish listing');
+            } finally {
+              setActionLoading(false);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const renderProfileTab = () => (
-    <View style={profileStyles.profileContainer}>
+    <ScrollView style={profileStyles.profileContainer}>
       <View style={profileStyles.profileHeader}>
         <View style={profileStyles.avatarContainer}>
           {userProfile?.avatarPath ? (
             // eslint-disable-next-line react/no-unstable-nested-components
-            <View style={{
-              width: 72,
-              height: 72,
-              borderRadius: 36,
-              overflow: 'hidden',
-              backgroundColor: Colors.surfaceAlt,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
+            <View
+              style={{
+                width: 72,
+                height: 72,
+                borderRadius: 36,
+                overflow: 'hidden',
+                backgroundColor: Colors.surfaceAlt,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
               {/* Use Image component when imported; kept simple to avoid new imports here */}
               <Text style={profileStyles.avatarText}>IMG</Text>
             </View>
@@ -317,7 +349,9 @@ const handleRepublishListing = (id: number) => {
           </View>
         )}
         <TouchableOpacity onPress={handleUploadAvatar} style={{ marginTop: 8 }}>
-          <Text style={{ color: Colors.primary, fontWeight: '600' }}>Change photo</Text>
+          <Text style={{ color: Colors.primary, fontWeight: '600' }}>
+            Change photo
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -374,6 +408,24 @@ const handleRepublishListing = (id: number) => {
         </View>
 
         <View style={profileStyles.fieldContainer}>
+          <Text style={profileStyles.fieldLabel}>Phone Number</Text>
+          {isEditing ? (
+            <TextInput
+              style={profileStyles.fieldInput}
+              value={editPhoneNumber}
+              onChangeText={handlePhoneNumberChange}
+              placeholder="Enter phone number (optional)"
+              placeholderTextColor={Colors.placeholder}
+              keyboardType="phone-pad"
+            />
+          ) : (
+            <Text style={profileStyles.fieldValue}>
+              {userProfile?.phoneNumber || 'Not set'}
+            </Text>
+          )}
+        </View>
+
+        <View style={profileStyles.fieldContainer}>
           <Text style={profileStyles.fieldLabel}>Email</Text>
           <Text style={profileStyles.fieldValue}>{userProfile?.email}</Text>
           <Text style={profileStyles.fieldNote}>Email cannot be changed</Text>
@@ -411,7 +463,7 @@ const handleRepublishListing = (id: number) => {
           </TouchableOpacity>
         )}
       </View>
-    </View>
+    </ScrollView>
   );
 
   const renderListingsTab = () => (
@@ -479,36 +531,42 @@ const handleRepublishListing = (id: number) => {
                   </Text>
                 )}
               </View>
-              {(listing.status === 'REJECTED' || listing.status === 'APPROVED') && (
-  <View style={profileStyles.listingActions}>
-    <TouchableOpacity
-      style={[profileStyles.actionButton, profileStyles.editBtn]}
-      onPress={() => handleEditListing(listing)}
-      disabled={actionLoading}
-    >
-      <Text style={profileStyles.actionText}>Edit</Text>
-    </TouchableOpacity>
+              {(listing.status === 'REJECTED' ||
+                listing.status === 'APPROVED') && (
+                <View style={profileStyles.listingActions}>
+                  <TouchableOpacity
+                    style={[profileStyles.actionButton, profileStyles.editBtn]}
+                    onPress={() => handleEditListing(listing)}
+                    disabled={actionLoading}
+                  >
+                    <Text style={profileStyles.actionText}>Edit</Text>
+                  </TouchableOpacity>
 
-    <TouchableOpacity
-      style={[profileStyles.actionButton, profileStyles.deleteBtn]}
-      onPress={() => handleDeleteListing(listing.id)}
-      disabled={actionLoading}
-    >
-      <Text style={profileStyles.actionText}>Delete</Text>
-    </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      profileStyles.actionButton,
+                      profileStyles.deleteBtn,
+                    ]}
+                    onPress={() => handleDeleteListing(listing.id)}
+                    disabled={actionLoading}
+                  >
+                    <Text style={profileStyles.actionText}>Delete</Text>
+                  </TouchableOpacity>
 
-    {listing.status === 'REJECTED' && (
-      <TouchableOpacity
-        style={[profileStyles.actionButton, profileStyles.republishBtn]}
-        onPress={() => handleRepublishListing(listing.id)}
-        disabled={actionLoading}
-      >
-        <Text style={profileStyles.actionText}>Republish</Text>
-      </TouchableOpacity>
-    )}
-  </View>
-)}
-
+                  {listing.status === 'REJECTED' && (
+                    <TouchableOpacity
+                      style={[
+                        profileStyles.actionButton,
+                        profileStyles.republishBtn,
+                      ]}
+                      onPress={() => handleRepublishListing(listing.id)}
+                      disabled={actionLoading}
+                    >
+                      <Text style={profileStyles.actionText}>Republish</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
             </View>
           ))}
         </ScrollView>
@@ -588,41 +646,41 @@ const handleRepublishListing = (id: number) => {
 
       {activeTab === 'profile' ? renderProfileTab() : renderListingsTab()}
       <Modal
-  visible={editModalVisible}
-  animationType="slide"
-  onRequestClose={() => {
-    setEditModalVisible(false);
-    setEditingListing(null);
-  }}
->
-  <SafeAreaView style={styles.screen}>
-    <View style={{ flex: 1 }}>
-      <View style={profileStyles.modalHeader}>
-        <TouchableOpacity
-          onPress={() => {
-            setEditModalVisible(false);
-            setEditingListing(null);
-          }}
-        >
-          <Text style={profileStyles.modalClose}>Close</Text>
-        </TouchableOpacity>
-        <Text style={profileStyles.modalTitle}>Edit listing</Text>
-        <View style={{ width: 48 }} />
-      </View>
-
-      <CreateListingSection
-        isGuest={false}
-        existingListing={editingListing ?? undefined}
-        mode="edit"
-        onCreated={async () => {
-          await fetchUserListings();
+        visible={editModalVisible}
+        animationType="slide"
+        onRequestClose={() => {
           setEditModalVisible(false);
           setEditingListing(null);
         }}
-      />
-    </View>
-  </SafeAreaView>
-</Modal>
+      >
+        <SafeAreaView style={styles.screen}>
+          <View style={{ flex: 1 }}>
+            <View style={profileStyles.modalHeader}>
+              <TouchableOpacity
+                onPress={() => {
+                  setEditModalVisible(false);
+                  setEditingListing(null);
+                }}
+              >
+                <Text style={profileStyles.modalClose}>Close</Text>
+              </TouchableOpacity>
+              <Text style={profileStyles.modalTitle}>Edit listing</Text>
+              <View style={{ width: 48 }} />
+            </View>
+
+            <CreateListingSection
+              isGuest={false}
+              existingListing={editingListing ?? undefined}
+              mode="edit"
+              onCreated={async () => {
+                await fetchUserListings();
+                setEditModalVisible(false);
+                setEditingListing(null);
+              }}
+            />
+          </View>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }

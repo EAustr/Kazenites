@@ -47,6 +47,7 @@ public class UserController {
         user.setName(request.getName());
         user.setSurname(request.getSurname());
         user.setCity(request.getCity());
+        user.setPhoneNumber(request.getPhoneNumber());
 
         return userRepository.save(user);
     }
@@ -90,6 +91,7 @@ public class UserController {
         private String name;
         private String surname;
         private String city;
+        private String phoneNumber;
 
         // Getters and setters
         public String getName() {
@@ -114,6 +116,14 @@ public class UserController {
 
         public void setCity(String city) {
             this.city = city;
+        }
+
+        public String getPhoneNumber() {
+            return phoneNumber;
+        }
+
+        public void setPhoneNumber(String phoneNumber) {
+            this.phoneNumber = phoneNumber;
         }
     }
 }

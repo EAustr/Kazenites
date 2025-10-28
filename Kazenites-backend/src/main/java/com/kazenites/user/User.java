@@ -33,6 +33,9 @@ public class User {
 
     private String city;
 
+    @Column(name = "phone_number")
+    private String phoneNumber;
+
     // Relative path under /uploads/** served by WebConfig, e.g.
     // /uploads/avatars/{userId}/avatar.jpg
     @Column(name = "avatar_path")
@@ -98,6 +101,14 @@ public class User {
 
     public void setCity(String city) {
         this.city = city;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
     }
 
     public String getAvatarPath() {

@@ -282,6 +282,11 @@ export default function ListingDetailModal({
                   {seller.city && (
                     <Text style={styles.sellerLocation}>📍 {seller.city}</Text>
                   )}
+                  {seller.phoneNumber && (
+                    <Text style={styles.sellerPhone}>
+                      📞 {seller.phoneNumber}
+                    </Text>
+                  )}
                 </View>
               </View>
             ) : (
@@ -501,6 +506,11 @@ const styles = StyleSheet.create({
   sellerLocation: {
     fontSize: 14,
     color: Colors.textMuted,
+  },
+  sellerPhone: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    marginTop: 2,
   },
   noSellerText: {
     color: Colors.textMuted,

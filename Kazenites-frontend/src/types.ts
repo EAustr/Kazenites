@@ -38,5 +38,6 @@ export type User = {
   surname: string;
   role: string; // 'USER' | 'ADMIN'
   city?: string;
+  phoneNumber?: string;
   avatarPath?: string | null;
 };
