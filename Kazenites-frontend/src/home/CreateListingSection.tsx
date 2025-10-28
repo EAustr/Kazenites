@@ -528,7 +528,7 @@ export default function CreateListingSection({
           </View>
         </Modal>
         <TextInput
-          placeholder="City (optional)"
+          placeholder="City"
           placeholderTextColor={Colors.placeholder}
           value={createCity}
           onChangeText={text => {
@@ -578,7 +578,7 @@ export default function CreateListingSection({
 
         {/* Images Section */}
         <View style={styles.imageSection}>
-          <Text style={styles.imageSectionTitle}>Images (optional)</Text>
+          <Text style={styles.createBtnText}>Images (optional)</Text>
 
           {/* Display selected images */}
           {selectedImages.length > 0 && (
@@ -602,8 +602,8 @@ export default function CreateListingSection({
 
           {/* Add image button */}
           {selectedImages.length < 5 && (
-            <TouchableOpacity style={styles.addImageBtn} onPress={selectImage}>
-              <Text style={styles.addImageBtnText}>📷 Add Image</Text>
+            <TouchableOpacity style={styles.createBtn} onPress={selectImage}>
+              <Text style={styles.createBtnText}>📷 Add Image</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -891,21 +891,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
     fontWeight: 'bold',
-  },
-  addImageBtn: {
-    backgroundColor: '#f1f5f9',
-    borderWidth: 1,
-    borderColor: '#cbd5f5',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  addImageBtnText: {
-    color: '#2563eb',
-    fontWeight: '600',
-    fontSize: 14,
   },
   imagePreviewContainer: {
     marginTop: 8,
