@@ -8,6 +8,13 @@ export type ListingStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export type ListingUnit = 'KG' | 'G';
 
+export type ListingImage = {
+  id: number;
+  listingId: number;
+  path: string;
+  sortOrder: number;
+};
+
 export type Listing = {
   id: number;
   title: string;
@@ -15,8 +22,10 @@ export type Listing = {
   price: number;
   city: string;
   categoryId: number;
+  ownerId: number;
   status: ListingStatus;
   unit?: ListingUnit;
+  images?: ListingImage[];
   createdAt?: string;
   updatedAt?: string;
   quantity?: number;
@@ -29,5 +38,6 @@ export type User = {
   surname: string;
   role: string; // 'USER' | 'ADMIN'
   city?: string;
+  phoneNumber?: string;
   avatarPath?: string | null;
 };
