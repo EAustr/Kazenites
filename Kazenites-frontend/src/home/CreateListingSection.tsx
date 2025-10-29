@@ -358,8 +358,6 @@ export default function CreateListingSection({
       setCreateMessage('Listing submitted! Pending approval.');
       resetForm();
 
-      // Call onCreated callback after everything is done, including image uploads
-      // Backend operations are already complete at this point since we awaited all fetch calls
       if (onCreated) {
         await onCreated();
       }

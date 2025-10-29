@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
 import { API_BASE_URL } from '../config';
 import type { Listing, ListingUnit, User, Category } from '../types';
@@ -251,6 +252,25 @@ export default function HomeScreen({
     }
   };
 
+  const handleDeleteUser = async (id: number) => {
+    if (!user || user.role !== 'ADMIN') return;
+    if (!token) {
+      console.warn('No token for delete user');
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`Delete user failed (${res.status})`);
+      await fetchUsers(); // Refresh the users list
+    } catch (e: any) {
+      console.error('handleDeleteUser error:', e);
+      Alert.alert('Error', 'Failed to delete user');
+    }
+  };
+
   useEffect(() => {
     refreshData();
     fetchCategories();
@@ -485,6 +505,7 @@ export default function HomeScreen({
           usersError={usersError}
           onApprove={handleApprove}
           onReject={handleReject}
+          onDeleteUser={handleDeleteUser}
           fetchUsers={fetchUsers}
           onClose={() => setShowAdmin(false)}
         />

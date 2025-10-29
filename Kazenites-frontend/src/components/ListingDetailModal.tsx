@@ -130,13 +130,17 @@ export default function ListingDetailModal({
     if (!listing) return '🍓';
     const category = categories.find(c => c.id === listing.categoryId);
     const categoryName = category?.name.toLowerCase() || '';
-    
+
     // Map category names to emojis
-    if (categoryName.includes('zemenes') || categoryName.includes('strawberr')) return '🍓';
-    if (categoryName.includes('mellenes') || categoryName.includes('blueberr')) return '🫐';
-    if (categoryName.includes('avenes') || categoryName.includes('raspberr')) return '🍇';
-    if (categoryName.includes('kazenes') || categoryName.includes('blackberr')) return '🫐';
-    
+    if (categoryName.includes('zemenes') || categoryName.includes('strawberr'))
+      return '🍓';
+    if (categoryName.includes('mellenes') || categoryName.includes('blueberr'))
+      return '🫐';
+    if (categoryName.includes('avenes') || categoryName.includes('raspberr'))
+      return '🍇';
+    if (categoryName.includes('kazenes') || categoryName.includes('blackberr'))
+      return '🫐';
+
     return '🍓'; // default fallback
   };
 
@@ -235,7 +239,9 @@ export default function ListingDetailModal({
                 <Text style={styles.metaText}>📍 {listing.city}</Text>
               </View>
               <View style={styles.metaChip}>
-                <Text style={styles.metaText}>{getCategoryEmoji()} {getCategoryName()}</Text>
+                <Text style={styles.metaText}>
+                  {getCategoryEmoji()} {getCategoryName()}
+                </Text>
               </View>
             </View>
           </View>
